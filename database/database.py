@@ -4,7 +4,7 @@ DB_NAME = "stylesense.db"
 
 
 def get_connection():
-    return sqlite3.connect(DB_NAME)
+    return sqlite3.connect(DB_NAME, check_same_thread=False)
 
 
 def init_database():
@@ -44,6 +44,19 @@ def init_database():
         project_id INTEGER,
         prompt TEXT,
         result TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
+
+    # ==========================
+    # DESIGNERS
+    # ==========================
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS designers(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT,
+        specialty TEXT,
+        location TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     """)

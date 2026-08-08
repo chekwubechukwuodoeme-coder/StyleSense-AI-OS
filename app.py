@@ -1,7 +1,6 @@
 import streamlit as st
 from pathlib import Path
 from database.database import init_database
-init_database()
 
 from views.fashion_cofounder import render_fashion_cofounder
 from views.dashboard import render_dashboard
@@ -23,7 +22,7 @@ from views.design_studio import render_design_studio
 from views.ai_team import render_ai_team
 from views.workspace import render_workspace
 from views.projects import render_projects
-
+init_database()
 
 PAGES = {
     "🏠 Dashboard": render_dashboard,
