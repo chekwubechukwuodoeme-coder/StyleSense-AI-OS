@@ -100,6 +100,9 @@ load_css()
 if "saved_designs" not in st.session_state:
     st.session_state.saved_designs = []
 
+if "saved_inspirations" not in st.session_state:
+    st.session_state.saved_inspirations = []
+
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
