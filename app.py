@@ -1,5 +1,6 @@
 import streamlit as st
 from pathlib import Path
+
 from database.database import init_database
 
 from views.fashion_cofounder import render_fashion_cofounder
@@ -22,7 +23,18 @@ from views.design_studio import render_design_studio
 from views.ai_team import render_ai_team
 from views.workspace import render_workspace
 from views.projects import render_projects
+
+
+# ============================================================
+# DATABASE
+# ============================================================
+
 init_database()
+
+
+# ============================================================
+# PAGES
+# ============================================================
 
 PAGES = {
     "🏠 Dashboard": render_dashboard,
@@ -46,17 +58,10 @@ PAGES = {
     "⚙ Settings": render_settings,
 }
 
-def load_css():
 
-    try:
-        with open("assets/css/style.css") as f:
-            st.markdown(
-                f"<style>{f.read()}</style>",
-                unsafe_allow_html=True
-            )
-    except FileNotFoundError:
-        st.warning("CSS file not found.")
-
+# ============================================================
+# PAGE CONFIG
+# ============================================================
 
 st.set_page_config(
     page_title="StyleSense AI OS",
@@ -64,11 +69,33 @@ st.set_page_config(
     layout="wide"
 )
 
+
+# ============================================================
+# CSS
+# ============================================================
+
+def load_css():
+
+    try:
+
+        with open("assets/css/style.css", encoding="utf-8") as f:
+
+            st.markdown(
+                f"<style>{f.read()}</style>",
+                unsafe_allow_html=True
+            )
+
+    except FileNotFoundError:
+
+        st.warning("CSS file not found.")
+
+
 load_css()
 
-# ==========================
+
+# ============================================================
 # SESSION STATE
-# ==========================
+# ============================================================
 
 if "saved_designs" not in st.session_state:
     st.session_state.saved_designs = []
@@ -85,36 +112,100 @@ if "current_image" not in st.session_state:
 if "current_project" not in st.session_state:
     st.session_state.current_project = None
 
-# ==========================
+# Main navigation state
+if "current_page" not in st.session_state:
+    st.session_state.current_page = "🏠 Dashboard"
+
+
+# ============================================================
 # SIDEBAR
-# ==========================
+# ============================================================
 
 with st.sidebar:
 
     logo_path = Path("assets/logo.png")
 
     if logo_path.exists():
-        st.image(str(logo_path), width=80)
+
+        st.image(
+            str(logo_path),
+            width=80
+        )
 
     st.title("👗 StyleSense AI OS")
-    st.caption("Powered by Chekwube Empire")
-    st.success("🟢 Gemini Connected")
-    navigation = ["🖥 Workspace"] + list(PAGES.keys())
 
-    page = st.radio(
-        "Navigation",
-        navigation
+    st.caption(
+        "Powered by Chekwube Empire"
     )
+
+    st.success(
+        "🟢 Gemini Connected"
+    )
+
+    st.divider()
+
+    navigation = [
+        "🖥 Workspace"
+    ] + list(PAGES.keys())
+
+
+    # --------------------------------------------------------
+    # Navigation
+    # --------------------------------------------------------
+
+    selected_page = st.radio(
+        "Navigation",
+        navigation,
+        index=navigation.index(
+            st.session_state.current_page
+        ),
+        key="main_navigation"
+    )
+
+
+    # --------------------------------------------------------
+    # Detect navigation change
+    # --------------------------------------------------------
+
+    if selected_page != st.session_state.current_page:
+
+        st.session_state.current_page = selected_page
+
+        st.rerun()
+
+
+# ============================================================
+# PAGE ROUTING
+# ============================================================
+
+page = st.session_state.current_page
+
+
+# ============================================================
+# WORKSPACE
+# ============================================================
 
 if page == "🖥 Workspace":
 
-    if st.session_state.current_project:
+    if st.session_state.current_project is None:
 
-        render_workspace()
+        st.warning(
+            "Open a project first."
+        )
+
+        st.info(
+            "Go to 📂 Projects and click Open."
+        )
 
     else:
 
-        st.warning("Open a project first.")
+        render_workspace()
+
+
+# ============================================================
+# NORMAL PAGES
+# ============================================================
+
 else:
 
     PAGES[page]()
