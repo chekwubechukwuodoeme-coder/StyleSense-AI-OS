@@ -41,7 +41,7 @@ def render_workspace():
 
         st.session_state.current_project = None
 
-        st.session_state.current_page = "📂 Projects"
+        st.session_state.open_workspace = False
 
         st.rerun()
 

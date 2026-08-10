@@ -93,9 +93,9 @@ def load_css():
 load_css()
 
 
-# ============================================================
+# ==========================
 # SESSION STATE
-# ============================================================
+# ==========================
 
 if "saved_designs" not in st.session_state:
     st.session_state.saved_designs = []
@@ -112,100 +112,69 @@ if "current_image" not in st.session_state:
 if "current_project" not in st.session_state:
     st.session_state.current_project = None
 
-# Main navigation state
-if "current_page" not in st.session_state:
-    st.session_state.current_page = "🏠 Dashboard"
+if "open_workspace" not in st.session_state:
+    st.session_state.open_workspace = False
 
 
-# ============================================================
+# ==========================
 # SIDEBAR
-# ============================================================
+# ==========================
 
 with st.sidebar:
 
     logo_path = Path("assets/logo.png")
 
     if logo_path.exists():
-
-        st.image(
-            str(logo_path),
-            width=80
-        )
+        st.image(str(logo_path), width=80)
 
     st.title("👗 StyleSense AI OS")
+    st.caption("Powered by Chekwube Empire")
+    st.success("🟢 Gemini Connected")
 
-    st.caption(
-        "Powered by Chekwube Empire"
-    )
+    navigation = ["🖥 Workspace"] + list(PAGES.keys())
 
-    st.success(
-        "🟢 Gemini Connected"
-    )
+    # Workspace was requested after opening a project
+    if st.session_state.get("open_workspace", False):
 
-    st.divider()
+        page = "🖥 Workspace"
 
-    navigation = [
-        "🖥 Workspace"
-    ] + list(PAGES.keys())
+        # Reset the flag so normal navigation returns afterward
+        st.session_state.open_workspace = False
 
+    else:
 
-    # --------------------------------------------------------
-    # Navigation
-    # --------------------------------------------------------
-
-    selected_page = st.radio(
-        "Navigation",
-        navigation,
-        index=navigation.index(
-            st.session_state.current_page
-        ),
-        key="main_navigation"
-    )
+        # Normal navigation
+        page = st.radio(
+            "Navigation",
+            navigation,
+            index=1,  # Dashboard is the first normal page
+            key="main_navigation"
+        )
 
 
-    # --------------------------------------------------------
-    # Detect navigation change
-    # --------------------------------------------------------
-
-    if selected_page != st.session_state.current_page:
-
-        st.session_state.current_page = selected_page
-
-        st.rerun()
-
-
-# ============================================================
+# ==========================
 # PAGE ROUTING
-# ============================================================
-
-page = st.session_state.current_page
-
-
-# ============================================================
-# WORKSPACE
-# ============================================================
+# ==========================
 
 if page == "🖥 Workspace":
 
-    if st.session_state.current_project is None:
+    if st.session_state.get("current_project") is None:
 
-        st.warning(
-            "Open a project first."
-        )
+        st.warning("Open a project first.")
 
         st.info(
-            "Go to 📂 Projects and click Open."
+            "Go to 📂 Projects and click "
+            "🚀 Open Project."
         )
 
     else:
 
         render_workspace()
 
-
-# ============================================================
-# NORMAL PAGES
-# ============================================================
-
 else:
 
-    PAGES[page]()
+    # Render the selected normal page
+    selected_page = PAGES.get(page)
+
+    if selected_page:
+        selected_page()

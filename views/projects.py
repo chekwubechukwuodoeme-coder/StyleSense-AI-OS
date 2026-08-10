@@ -14,36 +14,43 @@ def render_projects():
     st.subheader("Create New Project")
 
     # ==========================
+    # CREATE PROJECT FORM
+    # ==========================
+
+    with st.form("create_project_form", clear_on_submit=True):
+
+        title = st.text_input(
+            "Project Name",
+            placeholder="e.g. Chekwube Empire"
+        )
+
+        description = st.text_area(
+            "Description",
+            placeholder="Describe your fashion project..."
+        )
+
+        category = st.selectbox(
+            "Category",
+            [
+                "Luxury",
+                "Wedding",
+                "Streetwear",
+                "Corporate",
+                "Native Wear"
+            ]
+        )
+
+        submitted = st.form_submit_button(
+            "🚀 Create Project",
+            type="primary",
+            use_container_width=True
+        )
+
+    # ==========================
     # CREATE PROJECT
     # ==========================
 
-    title = st.text_input(
-        "Project Name",
-        key="project_name"
-    )
-
-    description = st.text_area(
-        "Description",
-        key="project_description"
-    )
-
-    category = st.selectbox(
-        "Category",
-        [
-            "Luxury",
-            "Wedding",
-            "Streetwear",
-            "Corporate",
-            "Native Wear"
-        ],
-        key="project_category"
-    )
-
-    if st.button(
-        "Create Project",
-        type="primary",
-        key="create_project_button"
-    ):
+    if submitted:
 
         if not title.strip():
 
@@ -58,12 +65,8 @@ def render_projects():
             )
 
             st.success(
-                f"Project '{title}' created successfully!"
+                f"Project '{title.strip()}' created successfully!"
             )
-
-            # Clear inputs
-            st.session_state.project_name = ""
-            st.session_state.project_description = ""
 
             st.rerun()
 
@@ -126,7 +129,7 @@ def render_projects():
             col1, col2 = st.columns(2)
 
             # ==========================
-            # OPEN
+            # OPEN PROJECT
             # ==========================
 
             with col1:
@@ -137,7 +140,6 @@ def render_projects():
                     use_container_width=True
                 ):
 
-                    # Save selected project
                     st.session_state.current_project = {
                         "id": project_id,
                         "title": project_title,
@@ -146,13 +148,13 @@ def render_projects():
                         "created_at": project_created
                     }
 
-                    # Tell app to show workspace
-                    st.session_state.current_page = "🖥 Workspace"
+                    # Tell app to open workspace
+                    st.session_state.open_workspace = True
 
                     st.rerun()
 
             # ==========================
-            # DELETE
+            # DELETE PROJECT
             # ==========================
 
             with col2:
@@ -167,21 +169,17 @@ def render_projects():
                         project_id
                     )
 
-                    # If deleted project was open
+                    # Clear current project if
+                    # the deleted project was open
+                    current_project = st.session_state.get(
+                        "current_project"
+                    )
+
                     if (
-                        st.session_state.get(
-                            "current_project"
-                        )
-                        and
-                        st.session_state.current_project.get(
-                            "id"
-                        ) == project_id
+                        current_project
+                        and current_project.get("id") == project_id
                     ):
 
                         st.session_state.current_project = None
-
-                    st.success(
-                        "Project deleted."
-                    )
 
                     st.rerun()
