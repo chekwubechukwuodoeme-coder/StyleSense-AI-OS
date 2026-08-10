@@ -103,6 +103,9 @@ if "saved_designs" not in st.session_state:
 if "saved_inspirations" not in st.session_state:
     st.session_state.saved_inspirations = []
 
+if "collections" not in st.session_state:
+    st.session_state.collections = []
+
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
