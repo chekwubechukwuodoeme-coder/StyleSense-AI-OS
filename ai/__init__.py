@@ -1,3 +1,4 @@
+from .model import ask_gemini, analyze_outfit
 from .business import fashion_cofounder
 
 from .designer import (

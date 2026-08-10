@@ -14,7 +14,9 @@ def render_outfit_analyzer():
     )
 
     if not uploaded_file:
+
         st.info("Upload an image to begin.")
+
         return
 
     image = Image.open(uploaded_file)
@@ -34,6 +36,15 @@ def render_outfit_analyzer():
 
             result = analyze_outfit(image)
 
-        st.success("Analysis completed!")
+        if result:
 
-        st.markdown(result)
+            st.success("Analysis completed!")
+
+            st.markdown(result)
+
+        else:
+
+            st.error(
+                "Gemini is temporarily unavailable. "
+                "Please try analyzing the outfit again in a moment."
+            )
