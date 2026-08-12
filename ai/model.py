@@ -1,5 +1,6 @@
 import os
 import io
+import time
 
 import streamlit as st
 from dotenv import load_dotenv
@@ -7,19 +8,18 @@ from google import genai
 from PIL import Image
 
 
-# ==========================
+# =========================================================
 # LOAD ENVIRONMENT
-# ==========================
+# =========================================================
 
 load_dotenv()
 
 
-# ==========================
+# =========================================================
 # GET GEMINI API KEY
-# ==========================
+# =========================================================
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-
 
 if not GEMINI_API_KEY:
     try:
@@ -32,18 +32,25 @@ if not GEMINI_API_KEY:
     raise ValueError("❌ GEMINI_API_KEY not found.")
 
 
-# ==========================
+# =========================================================
 # GEMINI CLIENT
-# ==========================
+# =========================================================
 
 client = genai.Client(
     api_key=GEMINI_API_KEY
 )
 
 
-# ==========================
+# =========================================================
+# GEMINI MODEL
+# =========================================================
+
+GEMINI_MODEL = "gemini-3.6-flash"
+
+
+# =========================================================
 # TEXT AI
-# ==========================
+# =========================================================
 
 def ask_gemini(prompt):
     """
@@ -53,7 +60,7 @@ def ask_gemini(prompt):
     try:
 
         response = client.models.generate_content(
-            model="gemini-2.5-flash",
+            model=GEMINI_MODEL,
             contents=prompt
         )
 
@@ -64,49 +71,121 @@ def ask_gemini(prompt):
 
     except Exception as e:
 
-        st.error(
-            f"Gemini API Error: {type(e).__name__}: {e}"
-        )
+        error_text = str(e)
+
+        # -------------------------------------------------
+        # RATE LIMIT / QUOTA ERROR
+        # -------------------------------------------------
+
+        if "429" in error_text or "RESOURCE_EXHAUSTED" in error_text:
+
+            st.error(
+                "⚠️ Gemini API quota/rate limit reached. "
+                "Please wait and try again, or check your Gemini "
+                "API billing/quota."
+            )
+
+        # -------------------------------------------------
+        # MODEL ERROR
+        # -------------------------------------------------
+
+        elif "404" in error_text or "NOT_FOUND" in error_text:
+
+            st.error(
+                f"❌ Gemini model error: {error_text}"
+            )
+
+        # -------------------------------------------------
+        # OTHER ERROR
+        # -------------------------------------------------
+
+        else:
+
+            st.error(
+                f"❌ Gemini API Error: "
+                f"{type(e).__name__}: {e}"
+            )
 
         return "❌ Unable to get a response from Gemini."
 
 
-# ==========================
+# =========================================================
 # OUTFIT IMAGE ANALYZER
-# ==========================
+# =========================================================
 
 def analyze_outfit(image):
     """
     Send an outfit image to Gemini for visual analysis.
     """
 
-    if not isinstance(image, Image.Image):
-        image = Image.open(image)
+    try:
 
-    if image.mode != "RGB":
-        image = image.convert("RGB")
+        # -------------------------------------------------
+        # CONVERT INPUT TO PIL IMAGE
+        # -------------------------------------------------
 
-    image_bytes = io.BytesIO()
-    image.save(image_bytes, format="JPEG", quality=90)
-    image_bytes = image_bytes.getvalue()
+        if not isinstance(image, Image.Image):
+            image = Image.open(image)
 
-    image_part = {
-        "inline_data": {
-            "mime_type": "image/jpeg",
-            "data": image_bytes
+        if image.mode != "RGB":
+            image = image.convert("RGB")
+
+
+        # -------------------------------------------------
+        # CONVERT IMAGE TO JPEG BYTES
+        # -------------------------------------------------
+
+        image_bytes = io.BytesIO()
+
+        image.save(
+            image_bytes,
+            format="JPEG",
+            quality=90
+        )
+
+        image_bytes = image_bytes.getvalue()
+
+
+        # -------------------------------------------------
+        # IMAGE PART
+        # -------------------------------------------------
+
+        image_part = {
+            "inline_data": {
+                "mime_type": "image/jpeg",
+                "data": image_bytes
+            }
         }
-    }
 
-    prompt = """
+
+        # -------------------------------------------------
+        # FASHION ANALYSIS PROMPT
+        # -------------------------------------------------
+
+        prompt = """
 You are an expert fashion stylist and image analyst.
 
 Analyze the actual outfit shown in the uploaded image.
 
 Do not ask the user to upload an image again.
 
-Analyze the clothing pieces, silhouette, fit, colors, patterns,
-fabric appearance, footwear, accessories, proportions, styling,
-color coordination, and overall aesthetic.
+Analyze:
+
+- clothing pieces
+- silhouette
+- fit
+- colors
+- patterns
+- fabric appearance
+- footwear
+- accessories
+- proportions
+- styling
+- color coordination
+- overall aesthetic
+
+Base your analysis ONLY on what is actually visible
+in the uploaded image.
 
 Return exactly these sections:
 
@@ -122,55 +201,77 @@ Return exactly these sections:
 
 # Improvement Suggestions
 
-Be specific and base your analysis only on what is visible in the image.
+Be specific, practical, and honest.
 """
 
-    models = [
-        "gemini-3.6-flash",
-        "gemini-3.5-flash",
-        "gemini-flash-latest",
-    ]
 
-    last_error = None
+        # -------------------------------------------------
+        # SEND IMAGE + PROMPT TO GEMINI
+        # -------------------------------------------------
 
-    for model in models:
+        response = client.models.generate_content(
+            model=GEMINI_MODEL,
+            contents=[
+                prompt,
+                image_part
+            ]
+        )
 
-        for attempt in range(2):
 
-            try:
+        # -------------------------------------------------
+        # RESPONSE
+        # -------------------------------------------------
 
-                response = client.models.generate_content(
-                    model=model,
-                    contents=[
-                        prompt,
-                        image_part
-                    ]
-                )
+        if response.text:
 
-                if response.text:
-                    return response.text
+            return response.text
 
-                last_error = "Gemini returned an empty response."
+        return "❌ Gemini returned an empty analysis."
 
-            except Exception as e:
 
-                last_error = e
+    # =====================================================
+    # ERROR HANDLING
+    # =====================================================
 
-                error_text = str(e)
+    except Exception as e:
 
-                # Retry temporary server overload errors
-                if "503" in error_text or "UNAVAILABLE" in error_text:
+        error_text = str(e)
 
-                    import time
-                    time.sleep(2)
 
-                    continue
+        # -------------------------------------------------
+        # RATE LIMIT
+        # -------------------------------------------------
 
-                # Move to the next model for model-specific errors
-                break
+        if "429" in error_text or "RESOURCE_EXHAUSTED" in error_text:
 
-    st.error(
-        f"Gemini Outfit Analysis failed: {last_error}"
-    )
+            st.error(
+                "⚠️ Gemini API quota/rate limit reached. "
+                "Please wait and try again, or check your "
+                "Gemini API billing/quota."
+            )
 
-    return None
+
+        # -------------------------------------------------
+        # MODEL NOT FOUND
+        # -------------------------------------------------
+
+        elif "404" in error_text or "NOT_FOUND" in error_text:
+
+            st.error(
+                f"❌ Gemini model error: {error_text}"
+            )
+
+
+        # -------------------------------------------------
+        # OTHER ERROR
+        # -------------------------------------------------
+
+        else:
+
+            st.error(
+                f"❌ Gemini Outfit Analysis Error: "
+                f"{type(e).__name__}: {e}"
+            )
+
+
+        return None
