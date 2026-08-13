@@ -45,6 +45,6 @@ def render_outfit_analyzer():
         else:
 
             st.error(
-                "Gemini is temporarily unavailable. "
-                "Please try analyzing the outfit again in a moment."
+                "AI analysis is temporarily unavailable. "
+                "Please try again in a moment."
             )

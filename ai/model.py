@@ -1,10 +1,10 @@
 import os
+import base64
 import io
-import time
 
 import streamlit as st
 from dotenv import load_dotenv
-from google import genai
+from openai import OpenAI
 from PIL import Image
 
 
@@ -16,97 +16,143 @@ load_dotenv()
 
 
 # =========================================================
-# GET GEMINI API KEY
+# GET OPENAI API KEY
 # =========================================================
 
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-if not GEMINI_API_KEY:
+if not OPENAI_API_KEY:
     try:
-        GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY")
+        OPENAI_API_KEY = st.secrets.get("OPENAI_API_KEY")
     except Exception:
-        GEMINI_API_KEY = None
+        OPENAI_API_KEY = None
 
 
-if not GEMINI_API_KEY:
-    raise ValueError("❌ GEMINI_API_KEY not found.")
+if not OPENAI_API_KEY:
+    raise ValueError(
+        "❌ OPENAI_API_KEY not found."
+    )
 
 
 # =========================================================
-# GEMINI CLIENT
+# OPENAI CLIENT
 # =========================================================
 
-client = genai.Client(
-    api_key=GEMINI_API_KEY
+client = OpenAI(
+    api_key=OPENAI_API_KEY
 )
 
 
 # =========================================================
-# GEMINI MODEL
+# DEFAULT MODEL
 # =========================================================
 
-GEMINI_MODEL = "gemini-3.6-flash"
+OPENAI_MODEL = "gpt-5-mini"
 
 
 # =========================================================
 # TEXT AI
 # =========================================================
 
-def ask_gemini(prompt):
+def ask_openai(prompt):
     """
-    Send a text-only prompt to Gemini.
+    Send a text-only prompt to OpenAI.
     """
 
     try:
 
-        response = client.models.generate_content(
-            model=GEMINI_MODEL,
-            contents=prompt
+        response = client.responses.create(
+            model=OPENAI_MODEL,
+            input=prompt
         )
 
-        if response.text:
-            return response.text
+        if response.output_text:
 
-        return "❌ Gemini returned an empty response."
+            return response.output_text
+
+        return "❌ OpenAI returned an empty response."
 
     except Exception as e:
 
-        error_text = str(e)
+        st.error(
+            f"❌ OpenAI API Error: "
+            f"{type(e).__name__}: {e}"
+        )
 
-        # -------------------------------------------------
-        # RATE LIMIT / QUOTA ERROR
-        # -------------------------------------------------
+        return (
+            "❌ Unable to get a response from OpenAI."
+        )
 
-        if "429" in error_text or "RESOURCE_EXHAUSTED" in error_text:
 
-            st.error(
-                "⚠️ Gemini API quota/rate limit reached. "
-                "Please wait and try again, or check your Gemini "
-                "API billing/quota."
-            )
+# =========================================================
+# BACKWARD COMPATIBILITY
+# =========================================================
 
-        # -------------------------------------------------
-        # MODEL ERROR
-        # -------------------------------------------------
+def ask_gemini(prompt):
+    """
+    Compatibility wrapper.
 
-        elif "404" in error_text or "NOT_FOUND" in error_text:
+    Existing StyleSense modules may still call
+    ask_gemini(). Instead of Gemini, the request
+    is now handled by OpenAI.
 
-            st.error(
-                f"❌ Gemini model error: {error_text}"
-            )
+    This means we don't have to rewrite every
+    existing file immediately.
+    """
 
-        # -------------------------------------------------
-        # OTHER ERROR
-        # -------------------------------------------------
+    return ask_openai(prompt)
 
-        else:
 
-            st.error(
-                f"❌ Gemini API Error: "
-                f"{type(e).__name__}: {e}"
-            )
+# =========================================================
+# IMAGE AI
+# =========================================================
 
-        return "❌ Unable to get a response from Gemini."
+def ask_openai_vision(prompt, image_data):
+    """
+    Send text + image to OpenAI.
+
+    image_data should be a data URL such as:
+
+    data:image/jpeg;base64,....
+    """
+
+    try:
+
+        response = client.responses.create(
+            model=OPENAI_MODEL,
+            input=[
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "input_text",
+                            "text": prompt
+                        },
+                        {
+                            "type": "input_image",
+                            "image_url": image_data
+                        }
+                    ]
+                }
+            ]
+        )
+
+        if response.output_text:
+
+            return response.output_text
+
+        return (
+            "❌ OpenAI returned an empty image analysis."
+        )
+
+    except Exception as e:
+
+        st.error(
+            f"❌ OpenAI Vision Error: "
+            f"{type(e).__name__}: {e}"
+        )
+
+        return None
 
 
 # =========================================================
@@ -115,7 +161,7 @@ def ask_gemini(prompt):
 
 def analyze_outfit(image):
     """
-    Send an outfit image to Gemini for visual analysis.
+    Analyze an uploaded outfit image using OpenAI vision.
     """
 
     try:
@@ -125,14 +171,35 @@ def analyze_outfit(image):
         # -------------------------------------------------
 
         if not isinstance(image, Image.Image):
+
             image = Image.open(image)
 
+
+        # -------------------------------------------------
+        # RGB
+        # -------------------------------------------------
+
         if image.mode != "RGB":
+
             image = image.convert("RGB")
 
 
         # -------------------------------------------------
-        # CONVERT IMAGE TO JPEG BYTES
+        # RESIZE LARGE IMAGE
+        # -------------------------------------------------
+
+        max_size = 1600
+
+        if max(image.size) > max_size:
+
+            image.thumbnail(
+                (max_size, max_size),
+                Image.Resampling.LANCZOS
+            )
+
+
+        # -------------------------------------------------
+        # CONVERT TO JPEG
         # -------------------------------------------------
 
         image_bytes = io.BytesIO()
@@ -147,15 +214,18 @@ def analyze_outfit(image):
 
 
         # -------------------------------------------------
-        # IMAGE PART
+        # BASE64
         # -------------------------------------------------
 
-        image_part = {
-            "inline_data": {
-                "mime_type": "image/jpeg",
-                "data": image_bytes
-            }
-        }
+        image_base64 = base64.b64encode(
+            image_bytes
+        ).decode("utf-8")
+
+
+        image_data = (
+            "data:image/jpeg;base64,"
+            + image_base64
+        )
 
 
         # -------------------------------------------------
@@ -163,115 +233,97 @@ def analyze_outfit(image):
         # -------------------------------------------------
 
         prompt = """
-You are an expert fashion stylist and image analyst.
+You are an expert fashion stylist, fashion designer,
+fashion consultant, and fashion image analyst for
+StyleSense AI OS.
 
-Analyze the actual outfit shown in the uploaded image.
+Analyze the ACTUAL outfit visible in the uploaded image.
 
-Do not ask the user to upload an image again.
+The image is already attached.
+
+IMPORTANT:
+
+Do NOT ask the user to upload another image.
+
+Do NOT say that the image is missing.
+
+Do NOT pretend that you cannot see the image.
+
+Base your analysis ONLY on what is visibly present.
+
+Do not invent:
+
+- brands
+- exact fabric composition
+- prices
+- measurements
+- clothing pieces that are not visible
+- accessories that are not visible
 
 Analyze:
 
 - clothing pieces
 - silhouette
 - fit
+- proportions
 - colors
 - patterns
 - fabric appearance
 - footwear
 - accessories
-- proportions
+- layering
 - styling
 - color coordination
 - overall aesthetic
 
-Base your analysis ONLY on what is actually visible
-in the uploaded image.
-
-Return exactly these sections:
+Return EXACTLY these sections:
 
 # Style
 
+Describe the overall style and aesthetic of the outfit.
+
 # Strengths
+
+Explain what works particularly well.
 
 # Weaknesses
 
+Explain what could be improved.
+
 # Color Harmony
+
+Analyze how the colors work together.
 
 # Accessories
 
+Analyze the visible accessories and recommend
+appropriate additions where useful.
+
 # Improvement Suggestions
+
+Give practical suggestions for improving the outfit,
+including fit, proportions, colors, footwear,
+accessories, or styling.
 
 Be specific, practical, and honest.
 """
 
 
         # -------------------------------------------------
-        # SEND IMAGE + PROMPT TO GEMINI
+        # SEND IMAGE TO OPENAI
         # -------------------------------------------------
 
-        response = client.models.generate_content(
-            model=GEMINI_MODEL,
-            contents=[
-                prompt,
-                image_part
-            ]
+        return ask_openai_vision(
+            prompt=prompt,
+            image_data=image_data
         )
 
 
-        # -------------------------------------------------
-        # RESPONSE
-        # -------------------------------------------------
-
-        if response.text:
-
-            return response.text
-
-        return "❌ Gemini returned an empty analysis."
-
-
-    # =====================================================
-    # ERROR HANDLING
-    # =====================================================
-
     except Exception as e:
 
-        error_text = str(e)
-
-
-        # -------------------------------------------------
-        # RATE LIMIT
-        # -------------------------------------------------
-
-        if "429" in error_text or "RESOURCE_EXHAUSTED" in error_text:
-
-            st.error(
-                "⚠️ Gemini API quota/rate limit reached. "
-                "Please wait and try again, or check your "
-                "Gemini API billing/quota."
-            )
-
-
-        # -------------------------------------------------
-        # MODEL NOT FOUND
-        # -------------------------------------------------
-
-        elif "404" in error_text or "NOT_FOUND" in error_text:
-
-            st.error(
-                f"❌ Gemini model error: {error_text}"
-            )
-
-
-        # -------------------------------------------------
-        # OTHER ERROR
-        # -------------------------------------------------
-
-        else:
-
-            st.error(
-                f"❌ Gemini Outfit Analysis Error: "
-                f"{type(e).__name__}: {e}"
-            )
-
+        st.error(
+            f"❌ Outfit Analysis Error: "
+            f"{type(e).__name__}: {e}"
+        )
 
         return None

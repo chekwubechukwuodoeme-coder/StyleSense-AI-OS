@@ -3,9 +3,11 @@ from pathlib import Path
 
 from database.database import init_database
 
+from views.auth import render_auth
+from views.profiles import render_profiles
 from views.fashion_cofounder import render_fashion_cofounder
 from views.dashboard import render_dashboard
-from views.find_designers import render_find_designers
+from views.marketplace import render_marketplace
 from views.design_library import render_design_library
 from views.settings import render_settings
 from views.fashion_trends import render_fashion_trends
@@ -53,7 +55,8 @@ PAGES = {
     "📰 Fashion News": render_fashion_news,
     "📰 Fashion Magazine": render_fashion_magazine,
     "🔥 AI Fashion Trends": render_fashion_trends,
-    "👗 Find Designers": render_find_designers,
+    "🛍️ Fashion Marketplace": render_marketplace,
+    "👗 Fashion Professionals": render_profiles,
     "👔 AI Virtual Stylist": render_virtual_stylist,
     "⚙ Settings": render_settings,
 }
@@ -97,6 +100,21 @@ load_css()
 # SESSION STATE
 # ==========================
 
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+
+if "user_id" not in st.session_state:
+    st.session_state.user_id = None
+
+if "user_name" not in st.session_state:
+    st.session_state.user_name = None
+
+if "user_email" not in st.session_state:
+    st.session_state.user_email = None
+
+if "auth_page" not in st.session_state:
+    st.session_state.auth_page = "login"
+
 if "saved_designs" not in st.session_state:
     st.session_state.saved_designs = []
 
@@ -135,7 +153,7 @@ with st.sidebar:
 
     st.title("👗 StyleSense AI OS")
     st.caption("Powered by Chekwube Empire")
-    st.success("🟢 Gemini Connected")
+    st.success("🟢 OpenAI Connected")
 
     navigation = ["🖥 Workspace"] + list(PAGES.keys())
 
@@ -159,6 +177,17 @@ with st.sidebar:
 
 
 # ==========================
+# AUTHENTICATION
+# ==========================
+
+if not st.session_state.logged_in:
+
+    render_auth()
+
+    st.stop()
+
+
+# ==========================
 # PAGE ROUTING
 # ==========================
 
@@ -179,8 +208,8 @@ if page == "🖥 Workspace":
 
 else:
 
-    # Render the selected normal page
     selected_page = PAGES.get(page)
 
     if selected_page:
+
         selected_page()
