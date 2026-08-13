@@ -1,5 +1,6 @@
 import streamlit as st
 
+from datetime import datetime
 from ai import generate_design
 from image_generator import generate_image
 from pdf_generator import create_pdf
@@ -252,11 +253,18 @@ experimental fashion concepts.
 
         else:
 
-            for design in st.session_state.saved_designs:
+            for i, design in enumerate(
+                reversed(st.session_state.saved_designs),
+                start=1
+            ):
 
-                with st.expander("Fashion Design"):
+                with st.expander(
+                    f"🎨 Fashion Design {i}"
+                ):
 
-                    st.write(design["design"])
+                    st.write(
+                        design["design"]
+                    )
 
                     if design["image"]:
 
@@ -472,7 +480,32 @@ experimental fashion concepts.
                 st.session_state.saved_designs.append(
                     {
                         "design": result,
-                        "image": image
+                        "image": image,
+
+                        "gender": gender,
+                        "age": age,
+                        "height": height,
+                        "body_shape": body_shape,
+                        "skin_tone": skin_tone,
+
+                        "category": category,
+                        "fabric": fabric,
+                        "colors": colors,
+
+                        "occasion": occasion,
+                        "budget": budget,
+                        "complexity": complexity,
+                        "theme": theme,
+
+                        "country": country,
+                        "climate": climate,
+
+                        "embroidery": embroidery,
+                        "accessories": accessories,
+
+                        "created_at": datetime.now().strftime(
+                            "%Y-%m-%d %H:%M"
+                        )
                     }
                 )
 

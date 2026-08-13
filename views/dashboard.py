@@ -9,6 +9,12 @@ from database.dashboard import (
 
 def render_dashboard():
 
+    if "saved_designs" not in st.session_state:
+        st.session_state.saved_designs = []
+
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
+
     st.title("👗 StyleSense AI OS")
 
     st.subheader("Your AI Fashion Operating System")
