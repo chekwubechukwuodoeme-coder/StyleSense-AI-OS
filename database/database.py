@@ -1,123 +1,52 @@
+from pathlib import Path
 import sqlite3
 
-DB_NAME = "stylesense.db"
+from database.users import init_users_table
+
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+DB_PATH = BASE_DIR / "stylesense.db"
 
 
 def get_connection():
-    return sqlite3.connect(DB_NAME, check_same_thread=False)
+
+    return sqlite3.connect(
+        DB_PATH,
+        check_same_thread=False
+    )
 
 
 def init_database():
+
     conn = get_connection()
     cursor = conn.cursor()
 
-    # ==========================
-    # USERS
-    # ==========================
     cursor.execute("""
-    CREATE TABLE IF NOT EXISTS users(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT,
-        email TEXT UNIQUE,
-        password TEXT
-    )
+        CREATE TABLE IF NOT EXISTS projects (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            description TEXT,
+            category TEXT,
+            cover_image TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
     """)
 
-    # ==========================
-    # PROJECTS
-    # ==========================
     cursor.execute("""
-    CREATE TABLE IF NOT EXISTS projects(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        title TEXT,
-        description TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-    """)
-
-    # ==========================
-    # DESIGNS
-    # ==========================
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS designs(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        project_id INTEGER,
-        prompt TEXT,
-        result TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-    """)
-
-    # ==========================
-    # DESIGNERS
-    # ==========================
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS designers(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT,
-        specialty TEXT,
-        location TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-    """)
-
-    # ==========================
-    # MISSION LOGS
-    # ==========================
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS mission_logs(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        mission TEXT,
-        report TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-    """)
-
-    # ==========================
-    # MEMORY
-    # ==========================
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS memory(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        title TEXT,
-        content TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-    """)
-
-    # ==========================
-    # FEED
-    # ==========================
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS feed(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        content TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-    """)
-
-    # ==========================
-    # MARKETPLACE
-    # ==========================
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS marketplace(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT,
-        price REAL,
-        description TEXT
-    )
-    """)
-
-    # ==========================
-    # PLANNER
-    # ==========================
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS planner(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        task TEXT,
-        status TEXT
-    )
+        CREATE TABLE IF NOT EXISTS fashion_profiles (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            profile_type TEXT NOT NULL,
+            description TEXT,
+            location TEXT,
+            specialties TEXT,
+            contact TEXT,
+            image_url TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
     """)
 
     conn.commit()
     conn.close()
+
+    init_users_table()
