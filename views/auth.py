@@ -65,9 +65,7 @@ def render_register():
 
         if success:
 
-            st.success(
-                "✅ Account created successfully!"
-            )
+            st.success(result)
 
             st.session_state.auth_page = "login"
 
@@ -128,24 +126,21 @@ def render_login():
 
             return
 
-        user = authenticate_user(
+        success, result = authenticate_user(
             email=email,
             password=password
         )
 
-        if user:
+        if success:
 
-            user_id, full_name, user_email = user
+            user_id = result["id"]
+            full_name = result["full_name"]
+            user_email = result["email"]
 
             st.session_state.logged_in = True
-
             st.session_state.user_id = user_id
-
             st.session_state.user_name = full_name
-
             st.session_state.user_email = user_email
-
-            st.session_state.auth_page = "login"
 
             st.success(
                 f"Welcome back, {full_name}! 👋"
@@ -155,9 +150,7 @@ def render_login():
 
         else:
 
-            st.error(
-                "❌ Invalid email or password."
-            )
+            st.error(f"❌ {result}")
 
     st.divider()
 

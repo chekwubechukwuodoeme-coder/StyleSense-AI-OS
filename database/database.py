@@ -1,15 +1,12 @@
 from pathlib import Path
 import sqlite3
 
-from database.users import init_users_table
-
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 DB_PATH = BASE_DIR / "stylesense.db"
 
 
 def get_connection():
-
     return sqlite3.connect(
         DB_PATH,
         check_same_thread=False
@@ -48,5 +45,3 @@ def init_database():
 
     conn.commit()
     conn.close()
-
-    init_users_table()
