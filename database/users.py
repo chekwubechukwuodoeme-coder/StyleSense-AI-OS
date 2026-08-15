@@ -1,144 +1,47 @@
-import sqlite3
-import hashlib
-from pathlib import Path
+import os
+
+from dotenv import load_dotenv
+from supabase import create_client
 
 
 # ============================================================
-# DATABASE
+# ENVIRONMENT
 # ============================================================
 
-DB_PATH = Path(__file__).resolve().parent.parent / "stylesense.db"
+load_dotenv()
+
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
 
-def get_connection():
-    return sqlite3.connect(
-        DB_PATH,
-        check_same_thread=False
+if not SUPABASE_URL:
+    raise ValueError("SUPABASE_URL is missing from .env")
+
+if not SUPABASE_KEY:
+    raise ValueError("SUPABASE_KEY is missing from .env")
+
+
+# ============================================================
+# SUPABASE CLIENT
+# ============================================================
+
+def get_supabase():
+    """
+    Create a fresh Supabase client for each authentication
+    operation.
+
+    This is safer for Streamlit because different users should
+    not share the same authentication session.
+    """
+
+    return create_client(
+        SUPABASE_URL,
+        SUPABASE_KEY
     )
 
 
 # ============================================================
-# INITIALIZE / MIGRATE USERS TABLE
-# ============================================================
-
-def init_users_table():
-
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    # --------------------------------------------------------
-    # Check whether users table exists
-    # --------------------------------------------------------
-
-    cursor.execute("""
-        SELECT name
-        FROM sqlite_master
-        WHERE type = 'table'
-        AND name = 'users'
-    """)
-
-    exists = cursor.fetchone()
-
-    # --------------------------------------------------------
-    # Create table if it doesn't exist
-    # --------------------------------------------------------
-
-    if not exists:
-
-        cursor.execute("""
-            CREATE TABLE users (
-
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-
-                full_name TEXT NOT NULL,
-
-                email TEXT NOT NULL UNIQUE,
-
-                password_hash TEXT NOT NULL,
-
-                created_at TIMESTAMP
-                    DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-
-    else:
-
-        # ----------------------------------------------------
-        # Get existing columns
-        # ----------------------------------------------------
-
-        cursor.execute(
-            "PRAGMA table_info(users)"
-        )
-
-        columns = {
-            row[1]
-            for row in cursor.fetchall()
-        }
-
-        # ----------------------------------------------------
-        # Add missing columns
-        # ----------------------------------------------------
-
-        if "full_name" not in columns:
-
-            cursor.execute("""
-                ALTER TABLE users
-                ADD COLUMN full_name TEXT
-            """)
-
-        if "email" not in columns:
-
-            cursor.execute("""
-                ALTER TABLE users
-                ADD COLUMN email TEXT
-            """)
-
-        if "password_hash" not in columns:
-
-            cursor.execute("""
-                ALTER TABLE users
-                ADD COLUMN password_hash TEXT
-            """)
-
-        if "created_at" not in columns:
-
-            cursor.execute("""
-                ALTER TABLE users
-                ADD COLUMN created_at TIMESTAMP
-            """)
-
-        # ----------------------------------------------------
-        # Migrate possible old name column
-        # ----------------------------------------------------
-
-        if "name" in columns:
-
-            cursor.execute("""
-                UPDATE users
-                SET full_name = name
-                WHERE
-                    (full_name IS NULL OR full_name = '')
-                    AND name IS NOT NULL
-            """)
-
-    conn.commit()
-    conn.close()
-
-
-# ============================================================
-# PASSWORD HASHING
-# ============================================================
-
-def hash_password(password):
-
-    return hashlib.sha256(
-        password.encode("utf-8")
-    ).hexdigest()
-
-
-# ============================================================
-# REGISTER USER
+# CREATE USER
 # ============================================================
 
 def create_user(
@@ -147,78 +50,52 @@ def create_user(
     password
 ):
 
-    init_users_table()
-
     full_name = full_name.strip()
     email = email.strip().lower()
 
     if not full_name:
-
         return False, "Please enter your full name."
 
     if not email:
-
         return False, "Please enter your email."
 
     if not password:
-
         return False, "Please enter a password."
 
     if len(password) < 6:
+        return False, "Password must be at least 6 characters."
 
-        return False, (
-            "Password must be at least 6 characters."
-        )
+    try:
 
-    conn = get_connection()
-    cursor = conn.cursor()
+        supabase = get_supabase()
 
-    # --------------------------------------------------------
-    # Check existing email
-    # --------------------------------------------------------
+        response = supabase.auth.sign_up({
+            "email": email,
+            "password": password,
+            "options": {
+                "data": {
+                    "full_name": full_name
+                }
+            }
+        })
 
-    cursor.execute("""
-        SELECT id
-        FROM users
-        WHERE email = ?
-    """, (email,))
+        if response.user is None:
+            return False, "Unable to create account."
 
-    existing_user = cursor.fetchone()
+        return True, response.user
 
-    if existing_user:
+    except Exception as e:
 
-        conn.close()
+        error_message = str(e)
 
-        return False, (
-            "An account with this email already exists."
-        )
+        if "already registered" in error_message.lower():
+            return False, "An account with this email already exists."
 
-    password_hash = hash_password(password)
-
-    cursor.execute("""
-        INSERT INTO users (
-            full_name,
-            email,
-            password_hash
-        )
-        VALUES (?, ?, ?)
-    """, (
-        full_name,
-        email,
-        password_hash
-    ))
-
-    conn.commit()
-
-    user_id = cursor.lastrowid
-
-    conn.close()
-
-    return True, user_id
+        return False, error_message
 
 
 # ============================================================
-# LOGIN
+# AUTHENTICATE USER
 # ============================================================
 
 def authenticate_user(
@@ -226,58 +103,79 @@ def authenticate_user(
     password
 ):
 
-    init_users_table()
-
     email = email.strip().lower()
 
-    password_hash = hash_password(password)
+    try:
 
-    conn = get_connection()
-    cursor = conn.cursor()
+        supabase = get_supabase()
 
-    cursor.execute("""
-        SELECT
-            id,
+        response = supabase.auth.sign_in_with_password({
+            "email": email,
+            "password": password
+        })
+
+        if not response.user:
+            return None
+
+        user = response.user
+
+        user_id = user.id
+
+        user_email = user.email
+
+        full_name = (
+            user.user_metadata.get("full_name")
+            if user.user_metadata
+            else None
+        )
+
+        if not full_name:
+            full_name = user_email.split("@")[0]
+
+        return (
+            user_id,
             full_name,
-            email
-        FROM users
-        WHERE
-            email = ?
-            AND password_hash = ?
-    """, (
-        email,
-        password_hash
-    ))
+            user_email
+        )
 
-    user = cursor.fetchone()
+    except Exception:
 
-    conn.close()
-
-    return user
+        return None
 
 
 # ============================================================
-# GET USER
+# GET CURRENT USER
 # ============================================================
 
 def get_user(user_id):
 
-    init_users_table()
+    try:
 
-    conn = get_connection()
-    cursor = conn.cursor()
+        supabase = get_supabase()
 
-    cursor.execute("""
-        SELECT
-            id,
-            full_name,
-            email
-        FROM users
-        WHERE id = ?
-    """, (user_id,))
+        response = supabase.auth.get_user()
 
-    user = cursor.fetchone()
+        if response and response.user:
 
-    conn.close()
+            user = response.user
 
-    return user
+            if user.id != user_id:
+                return None
+
+            full_name = (
+                user.user_metadata.get("full_name")
+                if user.user_metadata
+                else None
+            )
+
+            return (
+                user.id,
+                full_name,
+                user.email
+            )
+
+        return None
+
+    except Exception:
+
+        return None
