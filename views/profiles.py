@@ -18,15 +18,8 @@ PROFESSION_OPTIONS = [
     "Personal Stylist",
     "Fashion Consultant",
 
-    "Fabric Seller",
-    "Clothing Seller",
-    "Shoe Maker",
-    "Shoe Seller",
     "Bag Maker",
-    "Bag Seller",
-    "Accessories Seller",
     "Jewelry Designer",
-    "Jewelry Seller",
 
     "Fashion Photographer",
     "Fashion Videographer",

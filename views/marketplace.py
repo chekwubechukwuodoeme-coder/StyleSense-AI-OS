@@ -22,10 +22,10 @@ def listing_icon(listing_type):
     if listing_type == "Product":
         return "🛍️"
 
-    if listing_type == "Professional":
-        return "👤"
+    if listing_type == "Service":
+        return "🛠️"
 
-    return "🛠️"
+    return "📦"
 
 
 def whatsapp_url(number):
@@ -242,9 +242,8 @@ def render_create_listing():
     st.subheader("➕ Create Marketplace Listing")
 
     st.write(
-        "Sell a fashion product, promote your "
-        "professional services, or advertise your "
-        "fashion business."
+        "Sell fashion products or offer fashion-related "
+        "services to customers."
     )
 
     st.divider()
@@ -258,7 +257,7 @@ def render_create_listing():
     title = st.text_input(
         "Listing Title",
         placeholder=(
-            "e.g. Premium Ankara Fabric"
+            "e.g. Premium Ankara Fabric or Custom Tailoring"
         )
     )
 
@@ -886,9 +885,8 @@ def render_marketplace():
     st.title("🛍️ Fashion Marketplace")
 
     st.write(
-        "Discover clothing, fabrics, shoes, bags, "
-        "fashion professionals, services, manufacturers "
-        "and everything fashion-related."
+        "Discover fashion products and services from "
+        "sellers, creators, and businesses."
     )
 
     st.divider()
