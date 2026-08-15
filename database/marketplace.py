@@ -3,21 +3,25 @@ from pathlib import Path
 
 
 # ============================================================
-# DATABASE
+# DATABASE CONFIGURATION
 # ============================================================
 
 DB_PATH = Path(__file__).resolve().parent.parent / "stylesense.db"
 
 
 def get_connection():
-    return sqlite3.connect(
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+    conn = sqlite3.connect(
         DB_PATH,
         check_same_thread=False
     )
 
+    return conn
+
 
 # ============================================================
-# CATEGORIES
+# MARKETPLACE OPTIONS
 # ============================================================
 
 MARKETPLACE_CATEGORIES = [
@@ -60,137 +64,172 @@ LISTING_TYPES = [
 
 
 # ============================================================
+# REQUIRED COLUMNS
+# ============================================================
+
+REQUIRED_COLUMNS = {
+    "user_id": "INTEGER",
+    "title": "TEXT",
+    "listing_type": "TEXT",
+    "category": "TEXT",
+    "seller_name": "TEXT",
+    "location": "TEXT",
+    "description": "TEXT",
+    "price": "TEXT",
+    "image_url": "TEXT",
+    "phone": "TEXT",
+    "whatsapp": "TEXT",
+    "created_at": "TIMESTAMP",
+}
+
+
+# ============================================================
 # INITIALIZE / MIGRATE MARKETPLACE
 # ============================================================
 
 def init_marketplace_table():
 
     conn = get_connection()
-    cursor = conn.cursor()
 
-    # --------------------------------------------------------
-    # Check table
-    # --------------------------------------------------------
+    try:
 
-    cursor.execute("""
-        SELECT name
-        FROM sqlite_master
-        WHERE type = 'table'
-        AND name = 'marketplace_listings'
-    """)
+        cursor = conn.cursor()
 
-    exists = cursor.fetchone()
-
-    # --------------------------------------------------------
-    # Create new table
-    # --------------------------------------------------------
-
-    if not exists:
+        # ----------------------------------------------------
+        # Check whether table exists
+        # ----------------------------------------------------
 
         cursor.execute("""
-            CREATE TABLE marketplace_listings (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-
-                user_id INTEGER,
-
-                title TEXT NOT NULL,
-                listing_type TEXT NOT NULL,
-                category TEXT NOT NULL,
-
-                seller_name TEXT NOT NULL,
-                location TEXT,
-
-                description TEXT,
-                price TEXT,
-                image_url TEXT,
-
-                phone TEXT,
-                whatsapp TEXT,
-
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
+            SELECT name
+            FROM sqlite_master
+            WHERE type = 'table'
+            AND name = 'marketplace_listings'
         """)
 
-    else:
+        table_exists = cursor.fetchone()
 
         # ----------------------------------------------------
-        # Read existing columns
+        # CREATE TABLE
         # ----------------------------------------------------
 
-        cursor.execute(
-            "PRAGMA table_info(marketplace_listings)"
-        )
-
-        columns = {
-            row[1]
-            for row in cursor.fetchall()
-        }
-
-        # ----------------------------------------------------
-        # Add user_id
-        # ----------------------------------------------------
-
-        if "user_id" not in columns:
+        if not table_exists:
 
             cursor.execute("""
-                ALTER TABLE marketplace_listings
-                ADD COLUMN user_id INTEGER
+                CREATE TABLE marketplace_listings (
+
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                    user_id INTEGER,
+
+                    title TEXT NOT NULL,
+
+                    listing_type TEXT NOT NULL,
+
+                    category TEXT NOT NULL,
+
+                    seller_name TEXT NOT NULL,
+
+                    location TEXT DEFAULT '',
+
+                    description TEXT DEFAULT '',
+
+                    price TEXT DEFAULT '',
+
+                    image_url TEXT DEFAULT '',
+
+                    phone TEXT DEFAULT '',
+
+                    whatsapp TEXT DEFAULT '',
+
+                    created_at TIMESTAMP
+                        DEFAULT CURRENT_TIMESTAMP
+
+                )
             """)
 
-        # ----------------------------------------------------
-        # Add title
-        # ----------------------------------------------------
+        else:
 
-        if "title" not in columns:
+            # ------------------------------------------------
+            # Get existing columns
+            # ------------------------------------------------
 
-            cursor.execute("""
-                ALTER TABLE marketplace_listings
-                ADD COLUMN title TEXT
-            """)
+            cursor.execute(
+                "PRAGMA table_info(marketplace_listings)"
+            )
 
-            if "name" in columns:
+            existing_columns = {
+                row[1]
+                for row in cursor.fetchall()
+            }
+
+            # ------------------------------------------------
+            # Add missing columns
+            # ------------------------------------------------
+
+            for column_name, column_type in REQUIRED_COLUMNS.items():
+
+                if column_name not in existing_columns:
+
+                    cursor.execute(
+                        f"""
+                        ALTER TABLE marketplace_listings
+                        ADD COLUMN {column_name} {column_type}
+                        """
+                    )
+
+            # ------------------------------------------------
+            # Migrate old "name" column if it exists
+            # ------------------------------------------------
+
+            if "name" in existing_columns:
 
                 cursor.execute("""
                     UPDATE marketplace_listings
+
                     SET title = name
-                    WHERE title IS NULL
-                    OR title = ''
+
+                    WHERE
+                        (title IS NULL OR title = '')
+                        AND name IS NOT NULL
                 """)
 
-        # ----------------------------------------------------
-        # Add phone
-        # ----------------------------------------------------
+            # ------------------------------------------------
+            # Migrate old "contact" column if it exists
+            # ------------------------------------------------
 
-        if "phone" not in columns:
-
-            cursor.execute("""
-                ALTER TABLE marketplace_listings
-                ADD COLUMN phone TEXT
-            """)
-
-            if "contact" in columns:
+            if "contact" in existing_columns:
 
                 cursor.execute("""
                     UPDATE marketplace_listings
+
                     SET phone = contact
+
                     WHERE
                         (phone IS NULL OR phone = '')
                         AND contact IS NOT NULL
                 """)
 
-        # ----------------------------------------------------
-        # Add WhatsApp
-        # ----------------------------------------------------
+            # ------------------------------------------------
+            # Migrate old "seller" column if it exists
+            # ------------------------------------------------
 
-        if "whatsapp" not in columns:
+            if "seller" in existing_columns:
 
-            cursor.execute("""
-                ALTER TABLE marketplace_listings
-                ADD COLUMN whatsapp TEXT
-            """)
+                cursor.execute("""
+                    UPDATE marketplace_listings
 
-    conn.commit()
-    conn.close()
+                    SET seller_name = seller
+
+                    WHERE
+                        (seller_name IS NULL OR seller_name = '')
+                        AND seller IS NOT NULL
+                """)
+
+        conn.commit()
+
+    finally:
+
+        conn.close()
 
 
 # ============================================================
@@ -213,53 +252,71 @@ def create_listing(
 
     init_marketplace_table()
 
-    conn = get_connection()
-    cursor = conn.cursor()
+    title = str(title).strip()
+    listing_type = str(listing_type).strip()
+    category = str(category).strip()
+    seller_name = str(seller_name).strip()
 
-    cursor.execute("""
-        INSERT INTO marketplace_listings (
+    if not title:
+        raise ValueError("Listing title is required.")
+
+    if not listing_type:
+        raise ValueError("Listing type is required.")
+
+    if not category:
+        raise ValueError("Category is required.")
+
+    if not seller_name:
+        raise ValueError("Seller name is required.")
+
+    conn = get_connection()
+
+    try:
+
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            INSERT INTO marketplace_listings (
+
+                user_id,
+                title,
+                listing_type,
+                category,
+                seller_name,
+                location,
+                description,
+                price,
+                image_url,
+                phone,
+                whatsapp
+
+            )
+
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+
+        """, (
 
             user_id,
             title,
-            name,
             listing_type,
             category,
             seller_name,
-            location,
-            description,
-            price,
-            image_url,
-            phone,
-            whatsapp
+            str(location).strip(),
+            str(description).strip(),
+            str(price).strip(),
+            str(image_url).strip(),
+            str(phone).strip(),
+            str(whatsapp).strip()
 
-        )
+        ))
 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        conn.commit()
 
-    """, (
+        return cursor.lastrowid
 
-        user_id,
-        title.strip(),
-        title.strip(),
-        listing_type,
-        category,
-        seller_name.strip(),
-        location.strip(),
-        description.strip(),
-        price.strip(),
-        image_url.strip(),
-        phone.strip(),
-        whatsapp.strip()
+    finally:
 
-    ))
-
-    conn.commit()
-
-    listing_id = cursor.lastrowid
-
-    conn.close()
-
-    return listing_id
+        conn.close()
 
 
 # ============================================================
@@ -276,116 +333,115 @@ def get_listings(
     init_marketplace_table()
 
     conn = get_connection()
-    cursor = conn.cursor()
 
-    query = """
-        SELECT
+    try:
 
-            id,
-            user_id,
-            title,
-            listing_type,
-            category,
-            seller_name,
-            location,
-            description,
-            price,
-            image_url,
-            phone,
-            whatsapp,
-            created_at
+        query = """
+            SELECT
 
-        FROM marketplace_listings
+                id,
+                user_id,
+                title,
+                listing_type,
+                category,
+                seller_name,
+                location,
+                description,
+                price,
+                image_url,
+                phone,
+                whatsapp,
+                created_at
 
-        WHERE 1=1
-    """
+            FROM marketplace_listings
 
-    values = []
+            WHERE 1 = 1
+        """
 
-    # --------------------------------------------------------
-    # Search
-    # --------------------------------------------------------
+        values = []
 
-    if search.strip():
+        # ----------------------------------------------------
+        # SEARCH
+        # ----------------------------------------------------
 
-        search_value = f"%{search.strip()}%"
+        if search and search.strip():
 
-        query += """
-            AND (
+            search_value = f"%{search.strip()}%"
 
-                title LIKE ?
-                OR description LIKE ?
-                OR seller_name LIKE ?
-                OR category LIKE ?
-                OR location LIKE ?
+            query += """
+                AND (
+                    title LIKE ?
+                    OR description LIKE ?
+                    OR seller_name LIKE ?
+                    OR category LIKE ?
+                    OR location LIKE ?
+                )
+            """
 
+            values.extend([
+                search_value,
+                search_value,
+                search_value,
+                search_value,
+                search_value
+            ])
+
+        # ----------------------------------------------------
+        # CATEGORY
+        # ----------------------------------------------------
+
+        if category and category != "All":
+
+            query += """
+                AND category = ?
+            """
+
+            values.append(category)
+
+        # ----------------------------------------------------
+        # LISTING TYPE
+        # ----------------------------------------------------
+
+        if listing_type and listing_type != "All":
+
+            query += """
+                AND listing_type = ?
+            """
+
+            values.append(listing_type)
+
+        # ----------------------------------------------------
+        # LOCATION
+        # ----------------------------------------------------
+
+        if location and location.strip():
+
+            query += """
+                AND location LIKE ?
+            """
+
+            values.append(
+                f"%{location.strip()}%"
             )
-        """
 
-        values.extend([
-            search_value,
-            search_value,
-            search_value,
-            search_value,
-            search_value
-        ])
-
-    # --------------------------------------------------------
-    # Category
-    # --------------------------------------------------------
-
-    if category != "All":
+        # ----------------------------------------------------
+        # SORT
+        # ----------------------------------------------------
 
         query += """
-            AND category = ?
+            ORDER BY created_at DESC
         """
 
-        values.append(category)
-
-    # --------------------------------------------------------
-    # Listing type
-    # --------------------------------------------------------
-
-    if listing_type != "All":
-
-        query += """
-            AND listing_type = ?
-        """
-
-        values.append(listing_type)
-
-    # --------------------------------------------------------
-    # Location
-    # --------------------------------------------------------
-
-    if location.strip():
-
-        query += """
-            AND location LIKE ?
-        """
-
-        values.append(
-            f"%{location.strip()}%"
+        cursor = conn.execute(
+            query,
+            values
         )
 
-    # --------------------------------------------------------
-    # Newest first
-    # --------------------------------------------------------
+        return cursor.fetchall()
 
-    query += """
-        ORDER BY created_at DESC
-    """
+    finally:
 
-    cursor.execute(
-        query,
-        values
-    )
-
-    listings = cursor.fetchall()
-
-    conn.close()
-
-    return listings
+        conn.close()
 
 
 # ============================================================
@@ -397,39 +453,41 @@ def get_listing(listing_id):
     init_marketplace_table()
 
     conn = get_connection()
-    cursor = conn.cursor()
 
-    cursor.execute("""
-        SELECT
+    try:
 
-            id,
-            user_id,
-            title,
-            listing_type,
-            category,
-            seller_name,
-            location,
-            description,
-            price,
-            image_url,
-            phone,
-            whatsapp,
-            created_at
+        cursor = conn.execute("""
+            SELECT
 
-        FROM marketplace_listings
+                id,
+                user_id,
+                title,
+                listing_type,
+                category,
+                seller_name,
+                location,
+                description,
+                price,
+                image_url,
+                phone,
+                whatsapp,
+                created_at
 
-        WHERE id = ?
-    """, (listing_id,))
+            FROM marketplace_listings
 
-    listing = cursor.fetchone()
+            WHERE id = ?
 
-    conn.close()
+        """, (listing_id,))
 
-    return listing
+        return cursor.fetchone()
+
+    finally:
+
+        conn.close()
 
 
 # ============================================================
-# GET USER'S LISTINGS
+# GET USER LISTINGS
 # ============================================================
 
 def get_user_listings(user_id):
@@ -437,37 +495,39 @@ def get_user_listings(user_id):
     init_marketplace_table()
 
     conn = get_connection()
-    cursor = conn.cursor()
 
-    cursor.execute("""
-        SELECT
+    try:
 
-            id,
-            user_id,
-            title,
-            listing_type,
-            category,
-            seller_name,
-            location,
-            description,
-            price,
-            image_url,
-            phone,
-            whatsapp,
-            created_at
+        cursor = conn.execute("""
+            SELECT
 
-        FROM marketplace_listings
+                id,
+                user_id,
+                title,
+                listing_type,
+                category,
+                seller_name,
+                location,
+                description,
+                price,
+                image_url,
+                phone,
+                whatsapp,
+                created_at
 
-        WHERE user_id = ?
+            FROM marketplace_listings
 
-        ORDER BY created_at DESC
-    """, (user_id,))
+            WHERE user_id = ?
 
-    listings = cursor.fetchall()
+            ORDER BY created_at DESC
 
-    conn.close()
+        """, (user_id,))
 
-    return listings
+        return cursor.fetchall()
+
+    finally:
+
+        conn.close()
 
 
 # ============================================================
@@ -492,51 +552,54 @@ def update_listing(
     init_marketplace_table()
 
     conn = get_connection()
-    cursor = conn.cursor()
 
-    cursor.execute("""
-        UPDATE marketplace_listings
+    try:
 
-        SET
+        cursor = conn.execute("""
+            UPDATE marketplace_listings
 
-            title = ?,
-            listing_type = ?,
-            category = ?,
-            seller_name = ?,
-            location = ?,
-            description = ?,
-            price = ?,
-            image_url = ?,
-            phone = ?,
-            whatsapp = ?
+            SET
 
-        WHERE
-            id = ?
-            AND user_id = ?
-    """, (
+                title = ?,
+                listing_type = ?,
+                category = ?,
+                seller_name = ?,
+                location = ?,
+                description = ?,
+                price = ?,
+                image_url = ?,
+                phone = ?,
+                whatsapp = ?
 
-        title.strip(),
-        listing_type,
-        category,
-        seller_name.strip(),
-        location.strip(),
-        description.strip(),
-        price.strip(),
-        image_url.strip(),
-        phone.strip(),
-        whatsapp.strip(),
+            WHERE
+                id = ?
+                AND user_id = ?
 
-        listing_id,
-        user_id
+        """, (
 
-    ))
+            str(title).strip(),
+            listing_type,
+            category,
+            str(seller_name).strip(),
+            str(location).strip(),
+            str(description).strip(),
+            str(price).strip(),
+            str(image_url).strip(),
+            str(phone).strip(),
+            str(whatsapp).strip(),
 
-    updated = cursor.rowcount
+            listing_id,
+            user_id
 
-    conn.commit()
-    conn.close()
+        ))
 
-    return updated > 0
+        conn.commit()
+
+        return cursor.rowcount > 0
+
+    finally:
+
+        conn.close()
 
 
 # ============================================================
@@ -551,22 +614,32 @@ def delete_listing(
     init_marketplace_table()
 
     conn = get_connection()
-    cursor = conn.cursor()
 
-    cursor.execute("""
-        DELETE FROM marketplace_listings
+    try:
 
-        WHERE
-            id = ?
-            AND user_id = ?
-    """, (
-        listing_id,
-        user_id
-    ))
+        cursor = conn.execute("""
+            DELETE FROM marketplace_listings
 
-    deleted = cursor.rowcount
+            WHERE
+                id = ?
+                AND user_id = ?
 
-    conn.commit()
-    conn.close()
+        """, (
+            listing_id,
+            user_id
+        ))
 
-    return deleted > 0
+        conn.commit()
+
+        return cursor.rowcount > 0
+
+    finally:
+
+        conn.close()
+
+
+# ============================================================
+# INITIALIZE ON IMPORT
+# ============================================================
+
+init_marketplace_table()
