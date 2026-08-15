@@ -1,24 +1,13 @@
-import os
-
-from dotenv import load_dotenv
+import streamlit as st
 from supabase import create_client
 
 
 # ============================================================
-# ENVIRONMENT
+# SUPABASE CONFIGURATION
 # ============================================================
 
-load_dotenv()
-
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-
-
-if not SUPABASE_URL:
-    raise ValueError("SUPABASE_URL is missing from .env")
-
-if not SUPABASE_KEY:
-    raise ValueError("SUPABASE_KEY is missing from .env")
+SUPABASE_URL = st.secrets["SUPABASE_URL"]
+SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 
 
 # ============================================================
@@ -27,11 +16,7 @@ if not SUPABASE_KEY:
 
 def get_supabase():
     """
-    Create a fresh Supabase client for each authentication
-    operation.
-
-    This is safer for Streamlit because different users should
-    not share the same authentication session.
+    Create a Supabase client.
     """
 
     return create_client(
@@ -41,7 +26,7 @@ def get_supabase():
 
 
 # ============================================================
-# CREATE USER
+# CREATE USER / REGISTER
 # ============================================================
 
 def create_user(
@@ -53,16 +38,24 @@ def create_user(
     full_name = full_name.strip()
     email = email.strip().lower()
 
+    # --------------------------------------------------------
+    # Validation
+    # --------------------------------------------------------
+
     if not full_name:
+
         return False, "Please enter your full name."
 
     if not email:
+
         return False, "Please enter your email."
 
     if not password:
+
         return False, "Please enter a password."
 
     if len(password) < 6:
+
         return False, "Password must be at least 6 characters."
 
     try:
@@ -72,6 +65,7 @@ def create_user(
         response = supabase.auth.sign_up({
             "email": email,
             "password": password,
+
             "options": {
                 "data": {
                     "full_name": full_name
@@ -79,7 +73,12 @@ def create_user(
             }
         })
 
+        # ----------------------------------------------------
+        # Check user
+        # ----------------------------------------------------
+
         if response.user is None:
+
             return False, "Unable to create account."
 
         return True, response.user
@@ -88,14 +87,29 @@ def create_user(
 
         error_message = str(e)
 
+        # ----------------------------------------------------
+        # Existing account
+        # ----------------------------------------------------
+
         if "already registered" in error_message.lower():
-            return False, "An account with this email already exists."
+
+            return (
+                False,
+                "An account with this email already exists."
+            )
+
+        if "user already registered" in error_message.lower():
+
+            return (
+                False,
+                "An account with this email already exists."
+            )
 
         return False, error_message
 
 
 # ============================================================
-# AUTHENTICATE USER
+# LOGIN
 # ============================================================
 
 def authenticate_user(
@@ -104,6 +118,10 @@ def authenticate_user(
 ):
 
     email = email.strip().lower()
+
+    if not email or not password:
+
+        return None
 
     try:
 
@@ -114,23 +132,51 @@ def authenticate_user(
             "password": password
         })
 
+        # ----------------------------------------------------
+        # Make sure authentication succeeded
+        # ----------------------------------------------------
+
         if not response.user:
+
             return None
 
         user = response.user
 
+        # ----------------------------------------------------
+        # Supabase user ID
+        # ----------------------------------------------------
+
         user_id = user.id
+
+        # ----------------------------------------------------
+        # Email
+        # ----------------------------------------------------
 
         user_email = user.email
 
-        full_name = (
-            user.user_metadata.get("full_name")
-            if user.user_metadata
-            else None
-        )
+        # ----------------------------------------------------
+        # Full name
+        # ----------------------------------------------------
+
+        full_name = None
+
+        if user.user_metadata:
+
+            full_name = user.user_metadata.get(
+                "full_name"
+            )
+
+        # ----------------------------------------------------
+        # Fallback name
+        # ----------------------------------------------------
 
         if not full_name:
+
             full_name = user_email.split("@")[0]
+
+        # ----------------------------------------------------
+        # Return exactly what views/auth.py expects
+        # ----------------------------------------------------
 
         return (
             user_id,
@@ -147,7 +193,7 @@ def authenticate_user(
 # GET CURRENT USER
 # ============================================================
 
-def get_user(user_id):
+def get_current_user():
 
     try:
 
@@ -155,27 +201,87 @@ def get_user(user_id):
 
         response = supabase.auth.get_user()
 
-        if response and response.user:
+        if not response:
 
-            user = response.user
+            return None
 
-            if user.id != user_id:
-                return None
+        if not response.user:
 
-            full_name = (
-                user.user_metadata.get("full_name")
-                if user.user_metadata
-                else None
+            return None
+
+        user = response.user
+
+        full_name = None
+
+        if user.user_metadata:
+
+            full_name = user.user_metadata.get(
+                "full_name"
             )
 
-            return (
-                user.id,
-                full_name,
-                user.email
-            )
+        if not full_name:
 
-        return None
+            full_name = user.email.split("@")[0]
+
+        return {
+            "id": user.id,
+            "full_name": full_name,
+            "email": user.email
+        }
 
     except Exception:
 
         return None
+
+
+# ============================================================
+# GET USER BY ID
+# ============================================================
+
+def get_user(user_id):
+
+    """
+    Returns the currently authenticated user if the
+    Supabase ID matches.
+    """
+
+    try:
+
+        user = get_current_user()
+
+        if not user:
+
+            return None
+
+        if str(user["id"]) != str(user_id):
+
+            return None
+
+        return (
+            user["id"],
+            user["full_name"],
+            user["email"]
+        )
+
+    except Exception:
+
+        return None
+
+
+# ============================================================
+# LOGOUT
+# ============================================================
+
+def logout_user():
+
+    try:
+
+        supabase = get_supabase()
+
+        supabase.auth.sign_out()
+
+        return True
+
+    except Exception:
+
+        return False
