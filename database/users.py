@@ -14,9 +14,10 @@ SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 # SUPABASE CLIENT
 # ============================================================
 
+@st.cache_resource
 def get_supabase():
     """
-    Create and return the Supabase client.
+    Create and cache the Supabase client.
     """
 
     return create_client(
@@ -36,10 +37,16 @@ def create_user(
 ):
     """
     Create a new StyleSense user using Supabase Auth.
+
+    Returns:
+        (True, result)
+        or
+        (False, error_message)
     """
 
-    full_name = full_name.strip()
-    email = email.strip().lower()
+    full_name = (full_name or "").strip()
+    email = (email or "").strip().lower()
+    password = password or ""
 
     # --------------------------------------------------------
     # VALIDATION
@@ -73,22 +80,11 @@ def create_user(
             }
         )
 
-        # ----------------------------------------------------
-        # CHECK RESPONSE
-        # ----------------------------------------------------
-
         if not response.user:
-
-            return (
-                False,
-                "Unable to create account."
-            )
+            return False, "Unable to create account."
 
         # ----------------------------------------------------
-        # IMPORTANT:
-        # If Supabase email confirmation is enabled,
-        # the account is created but the user must verify
-        # their email before normal password login.
+        # EMAIL CONFIRMATION
         # ----------------------------------------------------
 
         if response.session is None:
@@ -100,33 +96,27 @@ def create_user(
                 "before logging in."
             )
 
-        return (
-            True,
-            response.user
-        )
+        # ----------------------------------------------------
+        # SESSION CREATED
+        # ----------------------------------------------------
+
+        return True, response.user
 
     except Exception as e:
 
         error_message = str(e)
+        error_lower = error_message.lower()
 
-        if "already registered" in error_message.lower():
-
+        if (
+            "already registered" in error_lower
+            or "user already registered" in error_lower
+        ):
             return (
                 False,
                 "An account with this email already exists."
             )
 
-        if "user already registered" in error_message.lower():
-
-            return (
-                False,
-                "An account with this email already exists."
-            )
-
-        return (
-            False,
-            error_message
-        )
+        return False, error_message
 
 
 # ============================================================
@@ -138,7 +128,7 @@ def authenticate_user(
     password
 ):
     """
-    Authenticate a user using email and password.
+    Authenticate a user using Supabase email/password.
 
     Returns:
 
@@ -151,10 +141,10 @@ def authenticate_user(
     or None if authentication fails.
     """
 
-    email = email.strip().lower()
+    email = (email or "").strip().lower()
+    password = password or ""
 
     if not email or not password:
-
         return None
 
     try:
@@ -168,43 +158,21 @@ def authenticate_user(
             }
         )
 
-        # ----------------------------------------------------
-        # CHECK USER
-        # ----------------------------------------------------
-
         if not response.user:
-
             return None
 
         user = response.user
 
-        # ----------------------------------------------------
-        # USER ID
-        # ----------------------------------------------------
-
         user_id = user.id
-
-        # ----------------------------------------------------
-        # EMAIL
-        # ----------------------------------------------------
-
         user_email = user.email
-
-        # ----------------------------------------------------
-        # FULL NAME
-        # ----------------------------------------------------
 
         full_name = None
 
         if user.user_metadata:
-
-            full_name = user.user_metadata.get(
-                "full_name"
+            full_name = (
+                user.user_metadata.get("full_name")
+                or user.user_metadata.get("name")
             )
-
-        # ----------------------------------------------------
-        # FALLBACK NAME
-        # ----------------------------------------------------
 
         if not full_name:
 
@@ -220,9 +188,39 @@ def authenticate_user(
             user_email
         )
 
-    except Exception:
+    except Exception as e:
+
+        print(
+            "EMAIL LOGIN ERROR:",
+            repr(e)
+        )
 
         return None
+
+
+# ============================================================
+# GOOGLE REDIRECT URL
+# ============================================================
+
+def get_google_redirect_url():
+    """
+    Return the URL Supabase should redirect back to
+    after Google authentication.
+
+    This MUST be configured in Streamlit secrets.
+    """
+
+    redirect_url = st.secrets.get(
+        "GOOGLE_REDIRECT_URL"
+    )
+
+    if not redirect_url:
+        raise RuntimeError(
+            "GOOGLE_REDIRECT_URL is missing from "
+            "Streamlit secrets."
+        )
+
+    return redirect_url.rstrip("/")
 
 
 # ============================================================
@@ -230,11 +228,19 @@ def authenticate_user(
 # ============================================================
 
 def get_google_login_url():
+    """
+    Generate the Google OAuth login URL.
+
+    Returns:
+        Google OAuth URL
+        or None if an error occurs.
+    """
 
     try:
+
         supabase = get_supabase()
 
-        redirect_url = st.secrets["GOOGLE_REDIRECT_URL"].rstrip("/")
+        redirect_url = get_google_redirect_url()
 
         response = supabase.auth.sign_in_with_oauth(
             {
@@ -245,11 +251,25 @@ def get_google_login_url():
             }
         )
 
+        if not response:
+            raise RuntimeError(
+                "Supabase did not return an OAuth response."
+            )
+
+        if not response.url:
+            raise RuntimeError(
+                "Supabase did not return a Google OAuth URL."
+            )
+
         return response.url
 
     except Exception as e:
-        st.error(f"GOOGLE LOGIN ERROR: {e}")
-        print("GOOGLE LOGIN ERROR:", repr(e))
+
+        print(
+            "GOOGLE LOGIN ERROR:",
+            repr(e)
+        )
+
         return None
 
 
@@ -258,128 +278,107 @@ def get_google_login_url():
 # ============================================================
 
 def handle_google_callback(oauth_code):
+    """
+    Exchange the Google OAuth authorization code
+    for a Supabase session and return the user.
+
+    Returns:
+        {
+            "id": user_id,
+            "full_name": full_name,
+            "email": email
+        }
+
+        or None if authentication fails.
+    """
 
     if not oauth_code:
+        print("GOOGLE CALLBACK ERROR: Missing OAuth code.")
         return None
 
     try:
+
         supabase = get_supabase()
 
+        # ----------------------------------------------------
+        # EXCHANGE AUTHORIZATION CODE
+        # ----------------------------------------------------
+
         response = supabase.auth.exchange_code_for_session(
-            {
-                "auth_code": oauth_code
-            }
+            oauth_code
         )
+
+        # ----------------------------------------------------
+        # GET USER FROM RESPONSE
+        # ----------------------------------------------------
 
         user = None
 
-        if hasattr(response, "user"):
-            user = response.user
+        if response:
 
-        if user is None and hasattr(response, "session"):
-            session = response.session
+            if hasattr(response, "user"):
+                user = response.user
 
-            if session and hasattr(session, "user"):
-                user = session.user
+            if user is None and hasattr(
+                response,
+                "session"
+            ):
+
+                session = response.session
+
+                if session and hasattr(
+                    session,
+                    "user"
+                ):
+                    user = session.user
+
+        # ----------------------------------------------------
+        # FALLBACK TO CURRENT SESSION
+        # ----------------------------------------------------
 
         if user is None:
-            return get_current_user()
+
+            current_user = get_current_user()
+
+            if current_user:
+                return current_user
+
+            print(
+                "GOOGLE CALLBACK ERROR: "
+                "Supabase returned no authenticated user."
+            )
+
+            return None
+
+        # ----------------------------------------------------
+        # USER NAME
+        # ----------------------------------------------------
 
         full_name = None
 
         if user.user_metadata:
+
             full_name = (
                 user.user_metadata.get("full_name")
                 or user.user_metadata.get("name")
             )
 
         if not full_name:
+
             full_name = (
                 user.email.split("@")[0]
                 if user.email
                 else "User"
             )
 
+        # ----------------------------------------------------
+        # RETURN USER
+        # ----------------------------------------------------
+
         return {
             "id": user.id,
             "full_name": full_name,
             "email": user.email
-        }
-
-    except Exception as e:
-        print(
-            "GOOGLE CALLBACK ERROR:",
-            repr(e)
-        )
-        return None
-
-        # ----------------------------------------------------
-        # CHECK USER
-        # ----------------------------------------------------
-
-        if not response:
-
-            return None
-
-        if not response.user:
-
-            return None
-
-        user = response.user
-
-        # ----------------------------------------------------
-        # USER ID
-        # ----------------------------------------------------
-
-        user_id = user.id
-
-        # ----------------------------------------------------
-        # EMAIL
-        # ----------------------------------------------------
-
-        user_email = user.email
-
-        # ----------------------------------------------------
-        # FULL NAME
-        # ----------------------------------------------------
-
-        full_name = None
-
-        if user.user_metadata:
-
-            full_name = user.user_metadata.get(
-                "full_name"
-            )
-
-        # Google sometimes provides the name
-        # under different metadata fields.
-
-        if not full_name and user.user_metadata:
-
-            full_name = user.user_metadata.get(
-                "name"
-            )
-
-        # ----------------------------------------------------
-        # FALLBACK
-        # ----------------------------------------------------
-
-        if not full_name:
-
-            if user_email:
-
-                full_name = (
-                    user_email.split("@")[0]
-                )
-
-            else:
-
-                full_name = "User"
-
-        return {
-            "id": user_id,
-            "full_name": full_name,
-            "email": user_email
         }
 
     except Exception as e:
@@ -399,6 +398,15 @@ def handle_google_callback(oauth_code):
 def get_current_user():
     """
     Return the currently authenticated Supabase user.
+
+    Returns:
+        {
+            "id": user_id,
+            "full_name": full_name,
+            "email": email
+        }
+
+        or None.
     """
 
     try:
@@ -408,48 +416,29 @@ def get_current_user():
         response = supabase.auth.get_user()
 
         if not response:
-
             return None
 
         if not response.user:
-
             return None
 
         user = response.user
-
-        # ----------------------------------------------------
-        # FULL NAME
-        # ----------------------------------------------------
 
         full_name = None
 
         if user.user_metadata:
 
-            full_name = user.user_metadata.get(
-                "full_name"
+            full_name = (
+                user.user_metadata.get("full_name")
+                or user.user_metadata.get("name")
             )
-
-        if not full_name and user.user_metadata:
-
-            full_name = user.user_metadata.get(
-                "name"
-            )
-
-        # ----------------------------------------------------
-        # FALLBACK
-        # ----------------------------------------------------
 
         if not full_name:
 
-            if user.email:
-
-                full_name = (
-                    user.email.split("@")[0]
-                )
-
-            else:
-
-                full_name = "User"
+            full_name = (
+                user.email.split("@")[0]
+                if user.email
+                else "User"
+            )
 
         return {
             "id": user.id,
@@ -471,12 +460,10 @@ def get_current_user():
 # GET USER
 # ============================================================
 
-def get_user(
-    user_id
-):
+def get_user(user_id):
     """
-    Get the currently authenticated user if their
-    Supabase ID matches the supplied ID.
+    Return the currently authenticated user only if
+    their Supabase ID matches user_id.
     """
 
     try:
@@ -484,13 +471,9 @@ def get_user(
         user = get_current_user()
 
         if not user:
-
             return None
 
-        if str(
-            user["id"]
-        ) != str(user_id):
-
+        if str(user["id"]) != str(user_id):
             return None
 
         return (
@@ -499,7 +482,12 @@ def get_user(
             user["email"]
         )
 
-    except Exception:
+    except Exception as e:
+
+        print(
+            "GET USER ERROR:",
+            repr(e)
+        )
 
         return None
 

@@ -118,9 +118,6 @@ def load_css():
 
     else:
 
-        # Don't interrupt the application
-        # just because CSS is missing.
-
         print(
             f"CSS file not found: {CSS_PATH}"
         )
@@ -174,6 +171,129 @@ if "open_workspace" not in st.session_state:
 
 
 # ============================================================
+# GOOGLE OAUTH CALLBACK
+# ============================================================
+
+# Handle OAuth BEFORE rendering the main application.
+
+if not st.session_state.logged_in:
+
+    oauth_error = st.query_params.get("error")
+
+    oauth_error_description = st.query_params.get(
+        "error_description"
+    )
+
+    oauth_code = st.query_params.get("code")
+
+    # --------------------------------------------------------
+    # GOOGLE / SUPABASE RETURNED AN ERROR
+    # --------------------------------------------------------
+
+    if oauth_error:
+
+        st.error(
+            f"Google authentication failed: {oauth_error}"
+        )
+
+        if oauth_error_description:
+
+            st.warning(
+                oauth_error_description
+            )
+
+        st.query_params.clear()
+
+        st.stop()
+
+    # --------------------------------------------------------
+    # GOOGLE / SUPABASE RETURNED AUTHORIZATION CODE
+    # --------------------------------------------------------
+
+    if oauth_code:
+
+        google_user = handle_google_callback(
+            oauth_code
+        )
+
+        if google_user:
+
+            st.session_state.logged_in = True
+
+            st.session_state.user_id = (
+                google_user["id"]
+            )
+
+            st.session_state.user_name = (
+                google_user["full_name"]
+            )
+
+            st.session_state.user_email = (
+                google_user["email"]
+            )
+
+            st.session_state.auth_page = "login"
+
+            # Remove OAuth parameters
+            st.query_params.clear()
+
+            st.rerun()
+
+        else:
+
+            st.error(
+                "Google authentication failed."
+            )
+
+            st.warning(
+                "The authorization code could not "
+                "be exchanged for a Supabase session."
+            )
+
+            st.info(
+                "Check the Streamlit Cloud logs for "
+                "GOOGLE CALLBACK ERROR."
+            )
+
+            st.query_params.clear()
+
+            st.stop()
+
+
+# ============================================================
+# CHECK EXISTING SUPABASE SESSION
+# ============================================================
+
+if not st.session_state.logged_in:
+
+    current_user = get_current_user()
+
+    if current_user:
+
+        st.session_state.logged_in = True
+
+        st.session_state.user_id = (
+            current_user["id"]
+        )
+
+        st.session_state.user_name = (
+            current_user["full_name"]
+        )
+
+        st.session_state.user_email = (
+            current_user["email"]
+        )
+
+        st.rerun()
+
+    else:
+
+        render_auth()
+
+        st.stop()
+
+
+# ============================================================
 # SIDEBAR
 # ============================================================
 
@@ -209,7 +329,10 @@ with st.sidebar:
         + list(PAGES.keys())
     )
 
-    # Workspace was requested after opening a project
+    # --------------------------------------------------------
+    # WORKSPACE
+    # --------------------------------------------------------
+
     if st.session_state.get(
         "open_workspace",
         False
@@ -217,9 +340,7 @@ with st.sidebar:
 
         page = "🖥 Workspace"
 
-        st.session_state.open_workspace = (
-            False
-        )
+        st.session_state.open_workspace = False
 
     else:
 
@@ -229,76 +350,6 @@ with st.sidebar:
             index=1,
             key="main_navigation"
         )
-
-
-# ==========================
-# GOOGLE OAUTH CALLBACK
-# ==========================
-
-if not st.session_state.logged_in:
-
-    oauth_code = st.query_params.get("code")
-
-    if oauth_code:
-
-        google_user = handle_google_callback(
-            oauth_code
-        )
-
-        if google_user:
-
-            st.session_state.logged_in = True
-
-            st.session_state.user_id = (
-                google_user["id"]
-            )
-
-            st.session_state.user_name = (
-                google_user["full_name"]
-            )
-
-            st.session_state.user_email = (
-                google_user["email"]
-            )
-
-            st.query_params.clear()
-
-            st.rerun()
-
-        else:
-
-            st.query_params.clear()
-
-            st.error(
-                "Google authentication failed. "
-                "Please try again."
-            )
-
-            st.stop()
-
-
-# ==========================
-# CHECK EXISTING SUPABASE SESSION
-# ==========================
-
-if not st.session_state.logged_in:
-
-    current_user = get_current_user()
-
-    if current_user:
-
-        st.session_state.logged_in = True
-        st.session_state.user_id = current_user["id"]
-        st.session_state.user_name = current_user["full_name"]
-        st.session_state.user_email = current_user["email"]
-
-        st.rerun()
-
-    else:
-
-        render_auth()
-
-        st.stop()
 
 
 # ============================================================

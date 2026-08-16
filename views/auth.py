@@ -72,7 +72,7 @@ def render_register():
         use_container_width=True
     ):
 
-        if not full_name:
+        if not full_name.strip():
 
             st.error(
                 "Please enter your full name."
@@ -80,7 +80,7 @@ def render_register():
 
             return
 
-        if not email:
+        if not email.strip():
 
             st.error(
                 "Please enter your email."
@@ -112,11 +112,17 @@ def render_register():
 
         if success:
 
-            st.success(
-                f"✅ {result}"
-                if isinstance(result, str)
-                else "✅ Account created successfully!"
-            )
+            if isinstance(result, str):
+
+                st.success(
+                    f"✅ {result}"
+                )
+
+            else:
+
+                st.success(
+                    "✅ Account created successfully!"
+                )
 
             st.info(
                 "If email confirmation is enabled in "
@@ -139,9 +145,7 @@ def render_register():
 
     st.divider()
 
-    st.subheader(
-        "Or"
-    )
+    st.subheader("Or")
 
     google_url = get_google_login_url()
 
@@ -156,7 +160,8 @@ def render_register():
     else:
 
         st.warning(
-            "Google sign-in is currently unavailable."
+            "Google sign-in is currently unavailable. "
+            "Please check your OAuth configuration."
         )
 
     # --------------------------------------------------------
@@ -220,7 +225,7 @@ def render_login():
         use_container_width=True
     ):
 
-        if not email:
+        if not email.strip():
 
             st.error(
                 "Please enter your email."
@@ -249,18 +254,10 @@ def render_login():
                 user_email
             ) = user
 
-            # ----------------------------------------------
-            # SESSION
-            # ----------------------------------------------
-
             st.session_state.logged_in = True
-
             st.session_state.user_id = user_id
-
             st.session_state.user_name = full_name
-
             st.session_state.user_email = user_email
-
             st.session_state.auth_page = "login"
 
             st.success(
@@ -303,7 +300,8 @@ def render_login():
     else:
 
         st.warning(
-            "Google sign-in is currently unavailable."
+            "Google sign-in is currently unavailable. "
+            "Please check your OAuth configuration."
         )
 
     # --------------------------------------------------------
@@ -332,10 +330,7 @@ def render_auth():
 
         st.session_state.auth_page = "login"
 
-    if (
-        st.session_state.auth_page
-        == "register"
-    ):
+    if st.session_state.auth_page == "register":
 
         render_register()
 

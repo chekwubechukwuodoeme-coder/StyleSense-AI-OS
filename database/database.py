@@ -17,10 +17,12 @@ DB_PATH = BASE_DIR / "stylesense.db"
 
 def get_connection():
 
-    return sqlite3.connect(
+    connection = sqlite3.connect(
         DB_PATH,
         check_same_thread=False
     )
+
+    return connection
 
 
 # ============================================================
