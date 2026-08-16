@@ -3,7 +3,6 @@ import streamlit as st
 from database.users import (
     create_user,
     authenticate_user,
-    get_google_login_url,
 )
 
 
@@ -165,33 +164,6 @@ def render_register():
             )
 
     # ========================================================
-    # GOOGLE SIGN UP
-    # ========================================================
-
-    st.divider()
-
-    st.subheader(
-        "Or"
-    )
-
-    google_url = get_google_login_url()
-
-    if google_url:
-
-        st.link_button(
-            "🔵 Sign up with Google",
-            google_url,
-            use_container_width=True
-        )
-
-    else:
-
-        st.warning(
-            "Google sign-in is currently unavailable. "
-            "Please check your OAuth configuration."
-        )
-
-    # ========================================================
     # LOGIN
     # ========================================================
 
@@ -329,33 +301,6 @@ def render_login():
                 "If you just created your account, "
                 "make sure you have verified your email."
             )
-
-    # ========================================================
-    # GOOGLE LOGIN
-    # ========================================================
-
-    st.divider()
-
-    st.subheader(
-        "Or continue with"
-    )
-
-    google_url = get_google_login_url()
-
-    if google_url:
-
-        st.link_button(
-            "🔵 Continue with Google",
-            google_url,
-            use_container_width=True
-        )
-
-    else:
-
-        st.warning(
-            "Google sign-in is currently unavailable. "
-            "Please check your OAuth configuration."
-        )
 
     # ========================================================
     # REGISTER
