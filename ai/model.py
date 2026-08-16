@@ -8,16 +8,16 @@ from openai import OpenAI
 from PIL import Image
 
 
-# =========================================================
+# ============================================================
 # LOAD ENVIRONMENT
-# =========================================================
+# ============================================================
 
 load_dotenv()
 
 
-# =========================================================
+# ============================================================
 # GET OPENAI API KEY
-# =========================================================
+# ============================================================
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
@@ -34,40 +34,54 @@ if not OPENAI_API_KEY:
     )
 
 
-# =========================================================
+# ============================================================
 # OPENAI CLIENT
-# =========================================================
+# ============================================================
 
-client = OpenAI(
-    api_key=OPENAI_API_KEY
-)
+@st.cache_resource
+def get_openai_client():
+    """
+    Create the OpenAI client once and reuse it.
+    This prevents Streamlit from recreating the client
+    on every script rerun.
+    """
+
+    return OpenAI(
+        api_key=OPENAI_API_KEY
+    )
 
 
-# =========================================================
-# DEFAULT MODEL
-# =========================================================
+client = get_openai_client()
+
+
+# ============================================================
+# FAST MODEL
+# ============================================================
 
 OPENAI_MODEL = "gpt-5-mini"
 
 
-# =========================================================
+# ============================================================
 # TEXT AI
-# =========================================================
+# ============================================================
 
 def ask_openai(prompt):
     """
-    Send a text-only prompt to OpenAI.
+    Fast text generation using OpenAI.
     """
+
+    if not prompt:
+        return "❌ Empty prompt."
 
     try:
 
         response = client.responses.create(
             model=OPENAI_MODEL,
-            input=prompt
+            input=prompt,
+            max_output_tokens=1200,
         )
 
         if response.output_text:
-
             return response.output_text
 
         return "❌ OpenAI returned an empty response."
@@ -84,57 +98,68 @@ def ask_openai(prompt):
         )
 
 
-# =========================================================
+# ============================================================
 # BACKWARD COMPATIBILITY
-# =========================================================
+# ============================================================
 
 def ask_gemini(prompt):
     """
     Compatibility wrapper.
 
-    Existing StyleSense modules may still call
-    ask_gemini(). Instead of Gemini, the request
-    is now handled by OpenAI.
+    StyleSense is NOT using the Gemini API.
 
-    This means we don't have to rewrite every
-    existing file immediately.
+    Older modules may still call ask_gemini().
+    Those calls are redirected to OpenAI.
     """
 
     return ask_openai(prompt)
 
 
-# =========================================================
-# IMAGE AI
-# =========================================================
+# ============================================================
+# OPENAI VISION
+# ============================================================
 
-def ask_openai_vision(prompt, image_data):
+def ask_openai_vision(
+    prompt,
+    image_data
+):
     """
     Send text + image to OpenAI.
-
-    image_data should be a data URL such as:
-
-    data:image/jpeg;base64,....
     """
+
+    if not prompt:
+        return "❌ Empty prompt."
+
+    if not image_data:
+        return "❌ No image provided."
 
     try:
 
         response = client.responses.create(
+
             model=OPENAI_MODEL,
+
             input=[
                 {
                     "role": "user",
+
                     "content": [
+
                         {
                             "type": "input_text",
                             "text": prompt
                         },
+
                         {
                             "type": "input_image",
                             "image_url": image_data
                         }
+
                     ]
                 }
-            ]
+            ],
+
+            max_output_tokens=1200,
         )
 
         if response.output_text:
@@ -142,7 +167,8 @@ def ask_openai_vision(prompt, image_data):
             return response.output_text
 
         return (
-            "❌ OpenAI returned an empty image analysis."
+            "❌ OpenAI returned an empty "
+            "image analysis."
         )
 
     except Exception as e:
@@ -155,9 +181,9 @@ def ask_openai_vision(prompt, image_data):
         return None
 
 
-# =========================================================
-# OUTFIT IMAGE ANALYZER
-# =========================================================
+# ============================================================
+# OUTFIT ANALYZER
+# ============================================================
 
 def analyze_outfit(image):
     """
@@ -166,56 +192,63 @@ def analyze_outfit(image):
 
     try:
 
-        # -------------------------------------------------
-        # CONVERT INPUT TO PIL IMAGE
-        # -------------------------------------------------
+        # ----------------------------------------------------
+        # CONVERT TO PIL IMAGE
+        # ----------------------------------------------------
 
-        if not isinstance(image, Image.Image):
+        if not isinstance(
+            image,
+            Image.Image
+        ):
 
             image = Image.open(image)
 
 
-        # -------------------------------------------------
+        # ----------------------------------------------------
         # RGB
-        # -------------------------------------------------
+        # ----------------------------------------------------
 
         if image.mode != "RGB":
 
             image = image.convert("RGB")
 
 
-        # -------------------------------------------------
-        # RESIZE LARGE IMAGE
-        # -------------------------------------------------
+        # ----------------------------------------------------
+        # RESIZE
+        # ----------------------------------------------------
 
-        max_size = 1600
+        max_size = 1200
 
         if max(image.size) > max_size:
 
             image.thumbnail(
-                (max_size, max_size),
+                (
+                    max_size,
+                    max_size
+                ),
                 Image.Resampling.LANCZOS
             )
 
 
-        # -------------------------------------------------
-        # CONVERT TO JPEG
-        # -------------------------------------------------
+        # ----------------------------------------------------
+        # JPEG COMPRESSION
+        # ----------------------------------------------------
 
         image_bytes = io.BytesIO()
 
         image.save(
             image_bytes,
             format="JPEG",
-            quality=90
+            quality=82,
+            optimize=True
         )
 
         image_bytes = image_bytes.getvalue()
 
 
-        # -------------------------------------------------
+        # ----------------------------------------------------
         # BASE64
-        # -------------------------------------------------
+        # ----------------------------------------------------
 
         image_base64 = base64.b64encode(
             image_bytes
@@ -228,90 +261,55 @@ def analyze_outfit(image):
         )
 
 
-        # -------------------------------------------------
-        # FASHION ANALYSIS PROMPT
-        # -------------------------------------------------
+        # ----------------------------------------------------
+        # PROMPT
+        # ----------------------------------------------------
 
         prompt = """
-You are an expert fashion stylist, fashion designer,
-fashion consultant, and fashion image analyst for
-StyleSense AI OS.
+You are an expert fashion stylist and image analyst
+for StyleSense AI OS.
 
-Analyze the ACTUAL outfit visible in the uploaded image.
+Analyze ONLY what is visibly present in the uploaded image.
 
-The image is already attached.
-
-IMPORTANT:
-
-Do NOT ask the user to upload another image.
-
-Do NOT say that the image is missing.
-
-Do NOT pretend that you cannot see the image.
-
-Base your analysis ONLY on what is visibly present.
-
-Do not invent:
-
-- brands
-- exact fabric composition
-- prices
-- measurements
-- clothing pieces that are not visible
-- accessories that are not visible
+Do not invent brands, prices, measurements,
+fabric composition, or clothing pieces.
 
 Analyze:
 
-- clothing pieces
-- silhouette
-- fit
-- proportions
-- colors
-- patterns
-- fabric appearance
-- footwear
-- accessories
-- layering
-- styling
-- color coordination
-- overall aesthetic
+- Clothing
+- Silhouette
+- Fit
+- Proportions
+- Colors
+- Patterns
+- Fabric appearance
+- Footwear
+- Accessories
+- Layering
+- Styling
+- Overall aesthetic
 
-Return EXACTLY these sections:
+Return EXACTLY:
 
 # Style
 
-Describe the overall style and aesthetic of the outfit.
-
 # Strengths
-
-Explain what works particularly well.
 
 # Weaknesses
 
-Explain what could be improved.
-
 # Color Harmony
-
-Analyze how the colors work together.
 
 # Accessories
 
-Analyze the visible accessories and recommend
-appropriate additions where useful.
-
 # Improvement Suggestions
 
-Give practical suggestions for improving the outfit,
-including fit, proportions, colors, footwear,
-accessories, or styling.
-
-Be specific, practical, and honest.
+Be specific, concise and practical.
 """
 
 
-        # -------------------------------------------------
-        # SEND IMAGE TO OPENAI
-        # -------------------------------------------------
+        # ----------------------------------------------------
+        # OPENAI VISION
+        # ----------------------------------------------------
 
         return ask_openai_vision(
             prompt=prompt,
