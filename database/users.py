@@ -374,54 +374,37 @@ def clear_google_oauth_state():
 
 def handle_google_callback(oauth_code):
 
-    """
-    Exchange the Google/Supabase authorization code for a
-    Supabase session.
-
-    The authorization code is single-use and short-lived.
-    Therefore this function must only be called once for
-    each callback URL.
-    """
-
     if not oauth_code:
-
-        print(
-            "GOOGLE CALLBACK ERROR: Missing OAuth code."
-        )
-
-        return None
-
-    # --------------------------------------------------------
-    # CHECK PKCE VERIFIER
-    # --------------------------------------------------------
-
-    verifier_key = "_supabase_code-verifier"
-
-    code_verifier = st.session_state.get(
-        verifier_key
-    )
-
-    if not code_verifier:
-
-        print(
-            "GOOGLE CALLBACK ERROR: "
-            "PKCE code verifier is missing."
-        )
-
+        print("GOOGLE CALLBACK ERROR: Missing OAuth code.")
         return None
 
     try:
 
         supabase = get_supabase()
 
-        print(
-            "GOOGLE CALLBACK: "
-            "PKCE verifier found."
+        print("=" * 60)
+        print("GOOGLE OAUTH CALLBACK")
+        print("=" * 60)
+
+        print("Authorization code received:", bool(oauth_code))
+
+        verifier = st.session_state.get(
+            "_supabase_code-verifier"
         )
 
         print(
-            "GOOGLE CALLBACK: "
-            "Exchanging authorization code..."
+            "PKCE verifier exists:",
+            bool(verifier)
+        )
+
+        if verifier:
+            print(
+                "PKCE verifier length:",
+                len(verifier)
+            )
+
+        print(
+            "Attempting Supabase code exchange..."
         )
 
         response = supabase.auth.exchange_code_for_session(
@@ -430,18 +413,16 @@ def handle_google_callback(oauth_code):
             }
         )
 
+        print(
+            "Supabase exchange response:",
+            repr(response)
+        )
+
         if not response:
-
             print(
-                "GOOGLE CALLBACK ERROR: "
-                "Supabase returned no response."
+                "ERROR: Supabase returned no response."
             )
-
             return None
-
-        # ----------------------------------------------------
-        # GET USER FROM RESPONSE
-        # ----------------------------------------------------
 
         user = getattr(
             response,
@@ -449,48 +430,37 @@ def handle_google_callback(oauth_code):
             None
         )
 
-        # ----------------------------------------------------
-        # FALLBACK TO SESSION USER
-        # ----------------------------------------------------
+        session = getattr(
+            response,
+            "session",
+            None
+        )
 
-        if user is None:
+        print(
+            "User returned:",
+            bool(user)
+        )
 
-            session = getattr(
-                response,
-                "session",
+        print(
+            "Session returned:",
+            bool(session)
+        )
+
+        if not user and session:
+
+            user = getattr(
+                session,
+                "user",
                 None
             )
 
-            if session:
-
-                user = getattr(
-                    session,
-                    "user",
-                    None
-                )
-
-        # ----------------------------------------------------
-        # FINAL FALLBACK
-        # ----------------------------------------------------
-
-        if user is None:
-
-            current_user = get_current_user()
-
-            if current_user:
-
-                return current_user
+        if not user:
 
             print(
-                "GOOGLE CALLBACK ERROR: "
-                "No authenticated user returned."
+                "ERROR: No authenticated user returned."
             )
 
             return None
-
-        # ----------------------------------------------------
-        # USER EMAIL
-        # ----------------------------------------------------
 
         user_email = getattr(
             user,
@@ -498,23 +468,19 @@ def handle_google_callback(oauth_code):
             None
         )
 
-        # ----------------------------------------------------
-        # USER NAME
-        # ----------------------------------------------------
-
-        full_name = None
-
-        user_metadata = getattr(
+        metadata = getattr(
             user,
             "user_metadata",
             None
         )
 
-        if user_metadata:
+        full_name = None
+
+        if metadata:
 
             full_name = (
-                user_metadata.get("full_name")
-                or user_metadata.get("name")
+                metadata.get("full_name")
+                or metadata.get("name")
             )
 
         if not full_name:
@@ -525,16 +491,12 @@ def handle_google_callback(oauth_code):
                 else "User"
             )
 
-        # ----------------------------------------------------
-        # SAVE APPLICATION AUTH STATE
-        # ----------------------------------------------------
-
-        st.session_state.google_oauth_url = None
-
         print(
-            "GOOGLE CALLBACK: "
-            "Authentication successful."
+            "GOOGLE LOGIN SUCCESS:",
+            user_email
         )
+
+        print("=" * 60)
 
         return {
             "id": user.id,
@@ -544,18 +506,28 @@ def handle_google_callback(oauth_code):
 
     except Exception as e:
 
+        print("=" * 60)
+        print("GOOGLE OAUTH EXCHANGE FAILED")
+        print("=" * 60)
+
         print(
-            "GOOGLE CALLBACK ERROR TYPE:",
+            "ERROR TYPE:",
             type(e).__name__
         )
 
         print(
-            "GOOGLE CALLBACK ERROR:",
+            "ERROR:",
             repr(e)
         )
 
-        return None
+        print(
+            "ERROR STRING:",
+            str(e)
+        )
 
+        print("=" * 60)
+
+        return None
 
 # ============================================================
 # CURRENT USER

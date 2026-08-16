@@ -188,21 +188,20 @@ def process_google_callback():
     # OAUTH ERROR
     # ========================================================
 
-    if oauth_error:
+    else:
 
         st.error(
             "Google authentication failed."
         )
 
         st.warning(
-            f"OAuth error: {oauth_error}"
+            "Check the Streamlit terminal logs for "
+            "the exact Supabase OAuth error."
         )
 
-        if oauth_error_description:
-
-            st.info(
-                oauth_error_description
-            )
+        st.info(
+            "Please start Google sign-in again."
+        )
 
         st.query_params.clear()
 
