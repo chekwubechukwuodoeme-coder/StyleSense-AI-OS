@@ -14,16 +14,22 @@ SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 # SUPABASE CLIENT
 # ============================================================
 
-@st.cache_resource
 def get_supabase():
     """
-    Create and cache the Supabase client.
+    Create one Supabase client per Streamlit user session.
+
+    The client must NOT be globally cached because it contains
+    authentication state and PKCE information.
     """
 
-    return create_client(
-        SUPABASE_URL,
-        SUPABASE_KEY
-    )
+    if "supabase_client" not in st.session_state:
+
+        st.session_state.supabase_client = create_client(
+            SUPABASE_URL,
+            SUPABASE_KEY
+        )
+
+    return st.session_state.supabase_client
 
 
 # ============================================================
