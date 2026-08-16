@@ -248,6 +248,7 @@ def get_google_login_url():
         return response.url
 
     except Exception as e:
+        st.error(f"GOOGLE LOGIN ERROR: {e}")
         print("GOOGLE LOGIN ERROR:", repr(e))
         return None
 
