@@ -227,8 +227,6 @@ def get_google_login_url():
 
         redirect_url = get_google_redirect_url()
 
-        st.write("OAuth redirect:", redirect_url)
-
         response = supabase.auth.sign_in_with_oauth(
             {
                 "provider": "google",
