@@ -1,82 +1,66 @@
+import io
+import urllib.request
+import re
+
 import streamlit as st
-
-# -----------------------------
-# Session State Initialization
-# -----------------------------
-
-if "saved_inspirations" not in st.session_state:
-    st.session_state.saved_inspirations = []
-
-if "selected_images" not in st.session_state:
-    st.session_state.selected_images = []
-
-if "collections" not in st.session_state:
-    st.session_state.collections = []
-
-if "current_design" not in st.session_state:
-    st.session_state.current_design = ""
-
-if "saved_designs" not in st.session_state:
-    st.session_state.saved_designs = []
 
 from services.pexels_service import search_fashion_images
 
 from ai import (
     fashion_chat,
-    analyze_outfit,
 )
 
-# ----------------------------------------
-# Session State
-# ----------------------------------------
 
-if "saved_inspirations" not in st.session_state:
-    st.session_state.saved_inspirations = []
+# ============================================================
+# SESSION STATE
+# ============================================================
 
-if "selected_images" not in st.session_state:
-    st.session_state.selected_images = []
+DEFAULT_STATE = {
+    "saved_inspirations": [],
+    "selected_images": [],
+    "collections": [],
+    "current_design": "",
+    "saved_designs": [],
 
-if "collections" not in st.session_state:
-    st.session_state.collections = []
+    # Design Studio connection
+    "open_design_studio": False,
+    "studio_reference_image_url": None,
+    "studio_reference_title": "",
+    "studio_reference_photographer": "",
+}
 
-if "current_design" not in st.session_state:
-    st.session_state.current_design = ""
 
-# ----------------------------------------
-# Trending Searches
-# ----------------------------------------
+for key, value in DEFAULT_STATE.items():
+
+    if key not in st.session_state:
+        st.session_state[key] = value
+
+
+# ============================================================
+# TRENDING SEARCHES
+# ============================================================
 
 TRENDING = [
 
     "Luxury Ankara",
-
     "Old Money",
-
     "Royal Wedding",
-
     "Celebrity Fashion",
-
     "Italian Suit",
-
     "Streetwear",
-
     "Corporate Fashion",
-
     "African Royalty",
-
     "Luxury Agbada",
-
     "Paris Fashion Week",
-
     "Luxury Lace",
-
-    "Modern Native Wear"
+    "Modern Native Wear",
 
 ]
 
-# ----------------------------------------
-# Hero Section
-# ----------------------------------------
+
+# ============================================================
+# HERO
+# ============================================================
 
 def hero():
 
@@ -84,15 +68,15 @@ def hero():
 
     st.caption(
         """
-Discover premium fashion inspiration from
-around the world and transform ideas into
-AI-powered fashion concepts.
+Discover premium fashion inspiration from around the world
+and transform ideas into AI-powered fashion concepts.
 """
     )
 
-# ----------------------------------------
-# Dashboard
-# ----------------------------------------
+
+# ============================================================
+# DASHBOARD
+# ============================================================
 
 def dashboard():
 
@@ -103,57 +87,37 @@ def dashboard():
     with m1:
 
         st.metric(
-
             "Saved",
-
-            len(
-                st.session_state.saved_inspirations
-            )
-
+            len(st.session_state.saved_inspirations)
         )
 
     with m2:
 
         st.metric(
-
             "Collections",
-
-            len(
-                st.session_state.collections
-            )
-
+            len(st.session_state.collections)
         )
 
     with m3:
 
         st.metric(
-
             "AI Designs",
-
-            len(
-                st.session_state.get(
-                    "saved_designs",
-                    []
-                )
-            )
-
+            len(st.session_state.saved_designs)
         )
 
     with m4:
 
         st.metric(
-
             "AI Status",
-
             "🟢 Online"
-
         )
 
     st.divider()
 
-# ----------------------------------------
-# Trending Buttons
-# ----------------------------------------
+
+# ============================================================
+# TRENDING
+# ============================================================
 
 def trending():
 
@@ -166,45 +130,41 @@ def trending():
     for i, trend in enumerate(TRENDING):
 
         if cols[i % 4].button(
-
             trend,
-
-            use_container_width=True
-
+            use_container_width=True,
+            key=f"trend_{i}"
         ):
 
             selected = trend
 
     return selected
 
-# ----------------------------------------
-# Search
-# ----------------------------------------
+
+# ============================================================
+# SEARCH
+# ============================================================
 
 def search_box(default_value=""):
 
     return st.text_input(
-
-        "Search Inspiration",
-
+        "🔎 Search Inspiration",
         value=default_value,
-
-        placeholder="Luxury Ankara, Streetwear, Wedding Suit..."
-
+        placeholder=(
+            "Luxury Ankara, Streetwear, "
+            "Wedding Suit..."
+        )
     )
 
-# ----------------------------------------
-# Filters
-# ----------------------------------------
+
+# ============================================================
+# FILTERS
+# ============================================================
 
 def filters():
 
     with st.expander(
-
         "🎯 Advanced Filters",
-
         expanded=False
-
     ):
 
         col1, col2 = st.columns(2)
@@ -212,154 +172,90 @@ def filters():
         with col1:
 
             gender = st.selectbox(
-
                 "Gender",
-
                 [
-
                     "All",
-
                     "Male",
-
                     "Female",
-
                     "Unisex"
-
                 ]
-
             )
 
             occasion = st.selectbox(
-
                 "Occasion",
-
                 [
-
                     "All",
-
                     "Wedding",
-
                     "Corporate",
-
                     "Luxury",
-
                     "Casual",
-
                     "Traditional"
-
                 ]
-
             )
 
             fabric = st.selectbox(
-
                 "Fabric",
-
                 [
-
                     "All",
-
                     "Ankara",
-
                     "Silk",
-
                     "Lace",
-
                     "Cotton",
-
                     "Velvet",
-
                     "Leather"
-
                 ]
-
             )
 
         with col2:
 
             color = st.selectbox(
-
                 "Primary Color",
-
                 [
-
                     "All",
-
                     "Black",
-
                     "White",
-
                     "Gold",
-
                     "Royal Blue",
-
                     "Wine",
-
                     "Brown"
-
                 ]
-
             )
 
             luxury = st.selectbox(
-
                 "Luxury Level",
-
                 [
-
                     "Standard",
-
                     "Premium",
-
                     "Luxury",
-
                     "Elite"
-
                 ]
-
             )
 
             country = st.selectbox(
-
                 "Country",
-
                 [
-
                     "Nigeria",
-
                     "Ghana",
-
                     "South Africa",
-
                     "United Kingdom",
-
                     "France",
-
                     "Italy"
-
                 ]
-
             )
 
     return {
-
         "gender": gender,
-
         "occasion": occasion,
-
         "fabric": fabric,
-
         "color": color,
-
         "luxury": luxury,
-
-        "country": country
-
+        "country": country,
     }
 
-# ----------------------------------------
-# Search Images
-# ----------------------------------------
+
+# ============================================================
+# SEARCH PEXELS
+# ============================================================
 
 def get_images(search):
 
@@ -368,31 +264,90 @@ def get_images(search):
 
     try:
 
-        with st.spinner("🔍 Searching fashion inspiration..."):
+        with st.spinner(
+            "🔍 Searching fashion inspiration..."
+        ):
 
             return search_fashion_images(search)
 
     except Exception as e:
 
-        st.error(e)
+        st.error(
+            f"Fashion inspiration search failed: {e}"
+        )
 
         return []
 
 
-# ----------------------------------------
-# Save Inspiration
-# ----------------------------------------
+# ============================================================
+# DOWNLOAD ORIGINAL PEXELS IMAGE
+# ============================================================
+
+def download_image_bytes(url):
+
+    if not url:
+        return None
+
+    try:
+
+        request = urllib.request.Request(
+            url,
+            headers={
+                "User-Agent": "Mozilla/5.0"
+            }
+        )
+
+        with urllib.request.urlopen(
+            request,
+            timeout=30
+        ) as response:
+
+            return response.read()
+
+    except Exception as e:
+
+        st.warning(
+            f"Unable to download this image: {e}"
+        )
+
+        return None
+
+
+# ============================================================
+# SAFE FILE NAME
+# ============================================================
+
+def safe_filename(title):
+
+    title = title or "fashion_inspiration"
+
+    title = re.sub(
+        r"[^a-zA-Z0-9_-]+",
+        "_",
+        title
+    )
+
+    return title[:80].strip("_") or "fashion_inspiration"
+
+
+# ============================================================
+# SAVE INSPIRATION
+# ============================================================
 
 def save_inspiration(image):
 
+    image_id = image.get("id")
+
     exists = any(
-        item["id"] == image["id"]
+        item.get("id") == image_id
         for item in st.session_state.saved_inspirations
     )
 
     if not exists:
 
-        st.session_state.saved_inspirations.append(image)
+        st.session_state.saved_inspirations.append(
+            image
+        )
 
         st.toast(
             "❤️ Inspiration Saved",
@@ -401,23 +356,55 @@ def save_inspiration(image):
 
     else:
 
-        st.info("Already saved.")
+        st.info(
+            "This inspiration is already saved."
+        )
 
 
-# ----------------------------------------
-# AI Analysis
-# ----------------------------------------
+# ============================================================
+# SEND TO DESIGN STUDIO
+# ============================================================
+
+def send_to_design_studio(image):
+
+    st.session_state.studio_reference_image_url = (
+        image.get("url")
+    )
+
+    st.session_state.studio_reference_title = (
+        image.get(
+            "title",
+            "Fashion Inspiration"
+        )
+    )
+
+    st.session_state.studio_reference_photographer = (
+        image.get(
+            "photographer",
+            "Pexels"
+        )
+    )
+
+    st.session_state.open_design_studio = True
+
+    st.rerun()
+
+
+# ============================================================
+# AI ANALYSIS
+# ============================================================
 
 def ai_analysis(image):
 
-    st.markdown("### 🤖 AI Fashion Analysis")
+    st.markdown(
+        "### 🤖 AI Fashion Analysis"
+    )
 
     prompt = f"""
 Analyze this fashion inspiration.
 
 Title:
-
-{image['title']}
+{image.get('title', '')}
 
 Create a professional fashion analysis.
 
@@ -444,25 +431,36 @@ Include:
 # Photoshoot Idea
 """
 
-    result = fashion_chat(prompt)
+    try:
 
-    st.markdown(result)
+        with st.spinner(
+            "🤖 AI is analyzing the inspiration..."
+        ):
+
+            result = fashion_chat(prompt)
+
+        st.markdown(result)
+
+    except Exception as e:
+
+        st.error(
+            f"AI analysis failed: {e}"
+        )
 
 
-# ----------------------------------------
-# Generate Similar
-# ----------------------------------------
+# ============================================================
+# GENERATE SIMILAR CONCEPT
+# ============================================================
 
 def generate_similar(search):
 
     prompt = f"""
 Create a completely original luxury fashion design.
 
-Inspired by:
-
+Fashion inspiration/search:
 {search}
 
-Include
+Include:
 
 # Design Concept
 
@@ -482,60 +480,101 @@ Include
 
 # Styling Tips
 
-Do not copy the inspiration.
+Do not copy an existing design.
 
 Create something unique.
 """
 
-    with st.spinner("✨ AI is designing..."):
+    try:
 
-        design = fashion_chat(prompt)
+        with st.spinner(
+            "✨ AI is designing..."
+        ):
 
-    st.session_state.current_design = design
+            design = fashion_chat(prompt)
 
-    st.success("Design created successfully!")
+        st.session_state.current_design = design
 
-    st.markdown(design)
+        st.success(
+            "✅ Design concept created successfully!"
+        )
+
+        st.markdown(design)
+
+    except Exception as e:
+
+        st.error(
+            f"Design generation failed: {e}"
+        )
 
 
-# ----------------------------------------
-# Image Card
-# ----------------------------------------
+# ============================================================
+# IMAGE CARD
+# ============================================================
 
 def image_card(image, index, search):
 
     with st.container(border=True):
 
-        st.image(
+        image_url = image.get("url")
 
-            image["url"],
+        if image_url:
 
-            use_container_width=True
-
-        )
+            st.image(
+                image_url,
+                use_container_width=True
+            )
 
         st.markdown(
-            f"**📸 {image['photographer']}**"
+            f"**📸 {image.get('photographer', 'Pexels')}**"
         )
 
-        st.caption(image["title"])
+        title = image.get(
+            "title",
+            "Fashion Inspiration"
+        )
+
+        st.caption(title)
 
         st.progress(0.92)
 
-        st.caption("Luxury Score • 92%")
+        st.caption(
+            "Luxury Score • 92%"
+        )
+
+        # ====================================================
+        # DOWNLOAD ORIGINAL
+        # ====================================================
+
+        image_bytes = download_image_bytes(
+            image_url
+        )
+
+        if image_bytes:
+
+            filename = safe_filename(title)
+
+            st.download_button(
+                "⬇️ Download Original",
+                data=image_bytes,
+                file_name=f"{filename}.jpg",
+                mime="image/jpeg",
+                use_container_width=True,
+                key=f"download_original_{index}_{image.get('id', index)}"
+            )
+
+        # ====================================================
+        # ROW 1
+        # ====================================================
 
         col1, col2 = st.columns(2)
 
         with col1:
 
             if st.button(
-
                 "❤️ Save",
-
-                key=f"save_{index}",
-
+                key=f"save_{index}_{image.get('id', index)}",
                 use_container_width=True
-
             ):
 
                 save_inspiration(image)
@@ -543,29 +582,25 @@ def image_card(image, index, search):
         with col2:
 
             if st.button(
-
                 "✨ Generate",
-
-                key=f"generate_{index}",
-
+                key=f"generate_{index}_{image.get('id', index)}",
                 use_container_width=True
-
             ):
 
                 generate_similar(search)
+
+        # ====================================================
+        # ROW 2
+        # ====================================================
 
         col3, col4 = st.columns(2)
 
         with col3:
 
             if st.button(
-
                 "🤖 Analyze",
-
-                key=f"analysis_{index}",
-
+                key=f"analysis_{index}_{image.get('id', index)}",
                 use_container_width=True
-
             ):
 
                 ai_analysis(image)
@@ -573,27 +608,23 @@ def image_card(image, index, search):
         with col4:
 
             if st.button(
-
                 "🎨 Studio",
-
-                key=f"studio_{index}",
-
+                key=f"studio_{index}_{image.get('id', index)}",
                 use_container_width=True
-
             ):
 
-                st.success(
-                    "Open AI Design Studio from the sidebar."
-                )
+                send_to_design_studio(image)
 
 
-# ----------------------------------------
-# Gallery
-# ----------------------------------------
+# ============================================================
+# GALLERY
+# ============================================================
 
 def gallery(images, search):
 
-    st.subheader("🖼 Inspiration Gallery")
+    st.subheader(
+        "🖼️ Inspiration Gallery"
+    )
 
     cols = st.columns(4)
 
@@ -607,20 +638,27 @@ def gallery(images, search):
                 search
             )
 
-# ----------------------------------------
-# Saved Inspirations
-# ----------------------------------------
+
+# ============================================================
+# SAVED INSPIRATIONS
+# ============================================================
 
 def saved_inspirations():
 
     st.divider()
-    st.subheader("❤️ Saved Inspirations")
+
+    st.subheader(
+        "❤️ Saved Inspirations"
+    )
 
     saved = st.session_state.saved_inspirations
 
     if not saved:
 
-        st.info("You haven't saved any inspiration yet.")
+        st.info(
+            "You haven't saved any inspiration yet."
+        )
+
         return
 
     cols = st.columns(4)
@@ -631,33 +669,83 @@ def saved_inspirations():
 
             with st.container(border=True):
 
-                st.image(
-                    image["url"],
-                    use_container_width=True
+                image_url = image.get("url")
+
+                if image_url:
+
+                    st.image(
+                        image_url,
+                        use_container_width=True
+                    )
+
+                title = image.get(
+                    "title",
+                    "Fashion Inspiration"
                 )
 
-                st.caption(image["title"])
+                st.caption(title)
+
+                # --------------------------------------------
+                # ORIGINAL DOWNLOAD
+                # --------------------------------------------
+
+                image_bytes = download_image_bytes(
+                    image_url
+                )
+
+                if image_bytes:
+
+                    st.download_button(
+                        "⬇️ Download Original",
+                        data=image_bytes,
+                        file_name=(
+                            f"Saved_Inspiration_{index + 1}.jpg"
+                        ),
+                        mime="image/jpeg",
+                        use_container_width=True,
+                        key=f"saved_download_{index}_{image.get('id', index)}"
+                    )
+
+                # --------------------------------------------
+                # DESIGN STUDIO
+                # --------------------------------------------
 
                 if st.button(
-                    "🗑 Remove",
-                    key=f"remove_{index}",
+                    "🎨 Use In Studio",
+                    key=f"saved_studio_{index}_{image.get('id', index)}",
                     use_container_width=True
                 ):
 
-                    st.session_state.saved_inspirations.remove(image)
+                    send_to_design_studio(image)
+
+                # --------------------------------------------
+                # DELETE
+                # --------------------------------------------
+
+                if st.button(
+                    "🗑️ Remove",
+                    key=f"remove_{index}_{image.get('id', index)}",
+                    use_container_width=True
+                ):
+
+                    st.session_state.saved_inspirations.remove(
+                        image
+                    )
 
                     st.rerun()
 
 
-# ----------------------------------------
-# Moodboard
-# ----------------------------------------
+# ============================================================
+# MOODBOARD
+# ============================================================
 
 def moodboard():
 
     st.divider()
 
-    st.subheader("📄 AI Moodboard")
+    st.subheader(
+        "📄 AI Moodboard"
+    )
 
     if st.button(
         "Generate Moodboard",
@@ -684,22 +772,34 @@ Return:
 # Styling Advice
 """
 
-        with st.spinner("Creating moodboard..."):
+        try:
 
-            result = fashion_chat(prompt)
+            with st.spinner(
+                "Creating moodboard..."
+            ):
 
-        st.markdown(result)
+                result = fashion_chat(prompt)
+
+            st.markdown(result)
+
+        except Exception as e:
+
+            st.error(
+                f"Moodboard generation failed: {e}"
+            )
 
 
-# ----------------------------------------
-# Collection Builder
-# ----------------------------------------
+# ============================================================
+# COLLECTION BUILDER
+# ============================================================
 
 def collection_builder():
 
     st.divider()
 
-    st.subheader("🎯 Collection Builder")
+    st.subheader(
+        "🎯 Collection Builder"
+    )
 
     collection_name = st.text_input(
         "Collection Name"
@@ -710,11 +810,18 @@ def collection_builder():
         use_container_width=True
     ):
 
+        if not collection_name.strip():
+
+            st.warning(
+                "Please enter a collection name."
+            )
+
+            return
+
         prompt = f"""
 Create a luxury fashion collection.
 
 Collection Name:
-
 {collection_name}
 
 Return:
@@ -742,20 +849,34 @@ Return:
 # Marketing Direction
 """
 
-        with st.spinner("Building collection..."):
+        try:
 
-            collection = fashion_chat(prompt)
+            with st.spinner(
+                "Building collection..."
+            ):
 
-        st.session_state.collections.append(collection)
+                collection = fashion_chat(prompt)
 
-        st.success("Collection created!")
+            st.session_state.collections.append(
+                collection
+            )
 
-        st.markdown(collection)
+            st.success(
+                "✅ Collection created!"
+            )
+
+            st.markdown(collection)
+
+        except Exception as e:
+
+            st.error(
+                f"Collection generation failed: {e}"
+            )
 
 
-# ----------------------------------------
-# Main Page
-# ----------------------------------------
+# ============================================================
+# MAIN PAGE
+# ============================================================
 
 def render_fashion_inspiration():
 
@@ -765,14 +886,17 @@ def render_fashion_inspiration():
 
     trending_search = trending()
 
-    search = search_box(trending_search or "")
+    search = search_box(
+        trending_search or ""
+    )
 
     filters()
 
     if not search:
 
         st.info(
-            "Search for fashion inspiration or choose a trending topic."
+            "Search for fashion inspiration "
+            "or choose a trending topic."
         )
 
         return
@@ -781,11 +905,16 @@ def render_fashion_inspiration():
 
     if not images:
 
-        st.warning("No inspiration found.")
+        st.warning(
+            "No inspiration found."
+        )
 
         return
 
-    gallery(images, search)
+    gallery(
+        images,
+        search
+    )
 
     saved_inspirations()
 

@@ -10,19 +10,15 @@ from PIL import Image
 # ============================================================
 
 def image_to_bytes(image):
-    """
-    Convert a generated image into PNG bytes.
-    """
 
     if image is None:
         return None
 
-    # Already bytes
+    # Bytes
     if isinstance(image, bytes):
-
         return image
 
-    # PIL Image
+    # PIL
     if isinstance(image, Image.Image):
 
         buffer = io.BytesIO()
@@ -31,8 +27,6 @@ def image_to_bytes(image):
             buffer,
             format="PNG"
         )
-
-        buffer.seek(0)
 
         return buffer.getvalue()
 
@@ -54,10 +48,12 @@ def image_to_bytes(image):
 
 def render_design_library():
 
-    st.title("📚 Design Library")
+    st.title(
+        "📚 Design Library"
+    )
 
     st.caption(
-        "Your personal collection of AI-generated fashion designs."
+        "Your personal collection of StyleSense AI fashion designs."
     )
 
     st.divider()
@@ -70,37 +66,50 @@ def render_design_library():
 
         st.session_state.saved_designs = []
 
+    designs = st.session_state.saved_designs
+
     # ========================================================
-    # EMPTY LIBRARY
+    # EMPTY
     # ========================================================
 
-    if not st.session_state.saved_designs:
+    if not designs:
 
         st.info(
             """
-            🎨 Your Design Library is empty.
+🎨 Your Design Library is empty.
 
-            Go to **AI Design Studio** and generate your
-            first fashion design.
-            """
+Go to **✨ AI Design Studio** and generate
+your first fashion design.
+"""
         )
 
         return
 
     # ========================================================
-    # LIBRARY STATISTICS
+    # STATISTICS
     # ========================================================
 
-    total_designs = len(
-        st.session_state.saved_designs
-    )
+    total_designs = len(designs)
 
     images_count = sum(
         1
-        for item in st.session_state.saved_designs
+        for item in designs
         if isinstance(item, dict)
-        and item.get("image")
+        and item.get("image") is not None
     )
+
+    modes = set()
+
+    for item in designs:
+
+        if isinstance(item, dict):
+
+            mode = item.get(
+                "mode"
+            )
+
+            if mode:
+                modes.add(mode)
 
     col1, col2, col3 = st.columns(3)
 
@@ -120,21 +129,9 @@ def render_design_library():
 
     with col3:
 
-        categories = set()
-
-        for item in st.session_state.saved_designs:
-
-            if isinstance(item, dict):
-
-                category = item.get("category")
-
-                if category:
-
-                    categories.add(category)
-
         st.metric(
-            "👗 Categories",
-            len(categories)
+            "⚙️ Design Modes",
+            len(modes)
         )
 
     st.divider()
@@ -145,49 +142,56 @@ def render_design_library():
 
     search = st.text_input(
         "🔎 Search Designs",
-        placeholder="Search by category, fabric, theme..."
+        placeholder=(
+            "Search by fabric, category, theme, "
+            "occasion or design type..."
+        )
     )
 
     # ========================================================
-    # FILTER
+    # MODE FILTER
     # ========================================================
 
-    all_categories = ["All"]
+    mode_options = [
+        "All"
+    ]
 
-    for item in st.session_state.saved_designs:
+    for item in designs:
 
         if isinstance(item, dict):
 
-            category = item.get("category")
+            mode = item.get(
+                "mode"
+            )
 
-            if category and category not in all_categories:
+            if mode and mode not in mode_options:
 
-                all_categories.append(category)
+                mode_options.append(
+                    mode
+                )
 
-    selected_category = st.selectbox(
-        "👗 Filter by Category",
-        all_categories
+    selected_mode = st.selectbox(
+        "⚙️ Filter by Design Type",
+        mode_options
     )
 
     st.divider()
 
     # ========================================================
-    # DISPLAY DESIGNS
+    # FILTER DESIGNS
     # ========================================================
 
-    displayed_designs = []
+    displayed = []
 
-    for original_index, item in enumerate(
-        st.session_state.saved_designs
-    ):
-
-        # ----------------------------------------------------
-        # OLD STRING FORMAT
-        # ----------------------------------------------------
+    for original_index, item in enumerate(designs):
 
         if isinstance(item, str):
 
-            displayed_designs.append(
+            if search and search.lower() not in item.lower():
+
+                continue
+
+            displayed.append(
                 (
                     original_index,
                     item
@@ -197,36 +201,42 @@ def render_design_library():
             continue
 
         # ----------------------------------------------------
-        # SEARCH FILTER
+        # SEARCH
         # ----------------------------------------------------
 
         if search:
 
-            search_text = " ".join([
-                str(item.get("design", "")),
-                str(item.get("category", "")),
-                str(item.get("fabric", "")),
-                str(item.get("occasion", "")),
-                str(item.get("theme", "")),
-                str(item.get("gender", "")),
-                str(item.get("country", ""))
-            ]).lower()
+            search_text = " ".join(
+                [
+                    str(item.get("design", "")),
+                    str(item.get("category", "")),
+                    str(item.get("fabric", "")),
+                    str(item.get("occasion", "")),
+                    str(item.get("theme", "")),
+                    str(item.get("gender", "")),
+                    str(item.get("country", "")),
+                    str(item.get("mode", "")),
+                    str(item.get("style", "")),
+                    str(item.get("culture", "")),
+                    str(item.get("market", "")),
+                ]
+            ).lower()
 
             if search.lower() not in search_text:
 
                 continue
 
         # ----------------------------------------------------
-        # CATEGORY FILTER
+        # MODE
         # ----------------------------------------------------
 
-        if selected_category != "All":
+        if selected_mode != "All":
 
-            if item.get("category") != selected_category:
+            if item.get("mode") != selected_mode:
 
                 continue
 
-        displayed_designs.append(
+        displayed.append(
             (
                 original_index,
                 item
@@ -234,10 +244,10 @@ def render_design_library():
         )
 
     # ========================================================
-    # NO SEARCH RESULTS
+    # EMPTY FILTER
     # ========================================================
 
-    if not displayed_designs:
+    if not displayed:
 
         st.warning(
             "No designs match your search."
@@ -249,7 +259,7 @@ def render_design_library():
     # NEWEST FIRST
     # ========================================================
 
-    displayed_designs.reverse()
+    displayed.reverse()
 
     # ========================================================
     # DESIGN CARDS
@@ -259,12 +269,12 @@ def render_design_library():
         original_index,
         item
     ) in enumerate(
-        displayed_designs,
+        displayed,
         start=1
     ):
 
         # ====================================================
-        # OLD FORMAT
+        # OLD STRING
         # ====================================================
 
         if isinstance(item, str):
@@ -276,7 +286,7 @@ def render_design_library():
                 st.markdown(item)
 
                 st.download_button(
-                    "📄 Download Design Concept",
+                    "📄 Download Concept",
                     data=item,
                     file_name=(
                         f"StyleSense_Design_"
@@ -290,8 +300,22 @@ def render_design_library():
             continue
 
         # ====================================================
-        # DESIGN INFORMATION
+        # DATA
         # ====================================================
+
+        design_text = item.get(
+            "design",
+            ""
+        )
+
+        image = item.get(
+            "image"
+        )
+
+        mode = item.get(
+            "mode",
+            "Fashion Design"
+        )
 
         category = item.get(
             "category",
@@ -313,37 +337,13 @@ def render_design_library():
             "Not specified"
         )
 
-        gender = item.get(
-            "gender",
-            "Not specified"
-        )
-
-        country = item.get(
-            "country",
-            "Not specified"
-        )
-
         created_at = item.get(
             "created_at",
             "Unknown"
         )
 
-        image = item.get(
-            "image"
-        )
-
-        design_text = item.get(
-            "design",
-            ""
-        )
-
-        # ====================================================
-        # TITLE
-        # ====================================================
-
         title = (
-            f"🎨 {category} "
-            f"— {theme}"
+            f"🎨 {category} • {mode}"
         )
 
         with st.expander(
@@ -352,99 +352,138 @@ def render_design_library():
         ):
 
             # =================================================
-            # IMAGE + DETAILS
+            # IMAGE
             # =================================================
 
-            left, right = st.columns(
-                [1.3, 1]
+            if image:
+
+                st.image(
+                    image,
+                    use_container_width=True
+                )
+
+            else:
+
+                st.info(
+                    "No generated image available."
+                )
+
+            # =================================================
+            # DETAILS
+            # =================================================
+
+            st.subheader(
+                "📋 Design Information"
             )
 
-            # -------------------------------------------------
-            # IMAGE
-            # -------------------------------------------------
+            st.write(
+                f"**Design Type:** {mode}"
+            )
 
-            with left:
+            st.write(
+                f"**Category:** {category}"
+            )
 
-                if image:
-
-                    st.image(
-                        image,
-                        use_container_width=True
-                    )
-
-                else:
-
-                    st.info(
-                        "No image available."
-                    )
-
-            # -------------------------------------------------
-            # DETAILS
-            # -------------------------------------------------
-
-            with right:
-
-                st.subheader(
-                    "📋 Design Details"
-                )
-
-                st.write(
-                    f"**Category:** {category}"
-                )
+            if fabric != "Not specified":
 
                 st.write(
                     f"**Fabric:** {fabric}"
                 )
 
+            if occasion != "Not specified":
+
                 st.write(
                     f"**Occasion:** {occasion}"
                 )
+
+            if theme != "Not specified":
 
                 st.write(
                     f"**Theme:** {theme}"
                 )
 
-                st.write(
-                    f"**Gender:** {gender}"
+            st.write(
+                f"**Created:** {created_at}"
+            )
+
+            # =================================================
+            # ADVANCED DETAILS
+            # =================================================
+
+            if mode == "Advanced Prompt-to-Design":
+
+                st.divider()
+
+                st.subheader(
+                    "⚙️ AI Design Settings"
                 )
 
                 st.write(
-                    f"**Country:** {country}"
+                    f"**Style:** "
+                    f"{item.get('style', 'AI Choice')}"
                 )
 
                 st.write(
-                    f"**Created:** {created_at}"
+                    f"**Fabric:** "
+                    f"{item.get('fabric', 'AI Choice')}"
                 )
 
-                # ---------------------------------------------
-                # COLORS
-                # ---------------------------------------------
-
-                colors = item.get(
-                    "colors",
-                    []
+                st.write(
+                    f"**Colour:** "
+                    f"{item.get('colour', 'AI Choice')}"
                 )
 
-                if colors:
-
-                    st.write(
-                        "**Colors:** "
-                        + ", ".join(colors)
-                    )
-
-                # ---------------------------------------------
-                # BUDGET
-                # ---------------------------------------------
-
-                budget = item.get(
-                    "budget"
+                st.write(
+                    f"**Occasion:** "
+                    f"{item.get('occasion', 'AI Choice')}"
                 )
 
-                if budget:
+                st.write(
+                    f"**Market:** "
+                    f"{item.get('market', 'AI Choice')}"
+                )
 
-                    st.write(
-                        f"**Budget:** {budget}"
-                    )
+                st.write(
+                    f"**Culture:** "
+                    f"{item.get('culture', 'AI Choice')}"
+                )
+
+            # =================================================
+            # REFERENCE DESIGN DETAILS
+            # =================================================
+
+            if mode == "Reference Image → Design":
+
+                st.divider()
+
+                st.subheader(
+                    "🖼️ Reference Information"
+                )
+
+                st.write(
+                    f"**Reference Source:** "
+                    f"{item.get('reference_source', 'Image')}"
+                )
+
+                st.write(
+                    f"**Silhouette Preserved:** "
+                    f"{'Yes' if item.get('preserve_silhouette') else 'No'}"
+                )
+
+                st.write(
+                    f"**Fabric Changed:** "
+                    f"{'Yes' if item.get('change_fabric') else 'No'}"
+                )
+
+                st.write(
+                    f"**Colour Changed:** "
+                    f"{'Yes' if item.get('change_colour') else 'No'}"
+                )
+
+                st.write(
+                    f"**Style Changed:** "
+                    f"{'Yes' if item.get('change_style') else 'No'}"
+                )
 
             st.divider()
 
@@ -481,7 +520,7 @@ def render_design_library():
             download_col1, download_col2 = st.columns(2)
 
             # -------------------------------------------------
-            # IMAGE DOWNLOAD
+            # IMAGE
             # -------------------------------------------------
 
             with download_col1:
@@ -495,23 +534,22 @@ def render_design_library():
                     if image_bytes:
 
                         st.download_button(
-                            "📥 Download Image",
+                            "📥 Download Design Image",
                             data=image_bytes,
                             file_name=(
                                 f"StyleSense_"
-                                f"{category.replace(' ', '_')}_"
-                                f"{display_number}.png"
+                                f"Design_{display_number}.png"
                             ),
                             mime="image/png",
                             use_container_width=True,
                             key=(
-                                f"image_download_"
+                                f"library_image_"
                                 f"{original_index}"
                             )
                         )
 
             # -------------------------------------------------
-            # TEXT DOWNLOAD
+            # CONCEPT
             # -------------------------------------------------
 
             with download_col2:
@@ -523,13 +561,12 @@ def render_design_library():
                         data=design_text,
                         file_name=(
                             f"StyleSense_"
-                            f"{category.replace(' ', '_')}_"
-                            f"{display_number}.txt"
+                            f"Concept_{display_number}.txt"
                         ),
                         mime="text/plain",
                         use_container_width=True,
                         key=(
-                            f"concept_download_"
+                            f"library_concept_"
                             f"{original_index}"
                         )
                     )
@@ -542,7 +579,7 @@ def render_design_library():
 
             if st.button(
                 "🗑️ Delete Design",
-                key=f"delete_{original_index}",
+                key=f"delete_library_{original_index}",
                 use_container_width=True
             ):
 

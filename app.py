@@ -133,6 +133,18 @@ DEFAULT_SESSION_STATE = {
     "current_project": None,
 
     "open_workspace": False,
+
+    # ========================================================
+    # FASHION INSPIRATION → DESIGN STUDIO
+    # ========================================================
+
+    "open_design_studio": False,
+
+    "studio_reference_image_url": None,
+
+    "studio_reference_title": "",
+
+    "studio_reference_photographer": "",
 }
 
 
@@ -286,6 +298,23 @@ with st.sidebar:
         page = "🖥 Workspace"
 
         st.session_state.open_workspace = False
+
+    # --------------------------------------------------------
+    # OPEN DESIGN STUDIO FROM FASHION INSPIRATION
+    # --------------------------------------------------------
+
+    elif st.session_state.get(
+        "open_design_studio",
+        False
+    ):
+
+        page = "✨ AI Design Studio"
+
+        st.session_state.open_design_studio = False
+
+    # --------------------------------------------------------
+    # NORMAL NAVIGATION
+    # --------------------------------------------------------
 
     else:
 
