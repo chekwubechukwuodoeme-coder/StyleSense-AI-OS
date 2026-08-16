@@ -417,6 +417,10 @@ def handle_google_callback(oauth_code):
             repr(e)
         )
 
+        st.error(
+            f"Google callback error: {type(e).__name__}: {e}"
+        )
+
         return None
 
 
