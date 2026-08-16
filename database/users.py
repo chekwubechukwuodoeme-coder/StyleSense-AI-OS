@@ -228,19 +228,14 @@ def get_google_redirect_url():
 # ============================================================
 
 def get_google_login_url():
-    """
-    Generate the Google OAuth login URL.
-
-    Returns:
-        Google OAuth URL
-        or None if an error occurs.
-    """
 
     try:
 
         supabase = get_supabase()
 
         redirect_url = get_google_redirect_url()
+
+        st.write("OAuth redirect:", redirect_url)
 
         response = supabase.auth.sign_in_with_oauth(
             {
@@ -264,6 +259,10 @@ def get_google_login_url():
         return response.url
 
     except Exception as e:
+
+        st.error(
+            f"GOOGLE LOGIN ERROR: {repr(e)}"
+        )
 
         print(
             "GOOGLE LOGIN ERROR:",
