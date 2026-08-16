@@ -203,13 +203,6 @@ def authenticate_user(
 # ============================================================
 
 def get_google_redirect_url():
-    """
-    Return the URL Supabase should redirect back to
-    after Google authentication.
-
-    This MUST be configured in Streamlit secrets.
-    """
-
     redirect_url = st.secrets.get(
         "GOOGLE_REDIRECT_URL"
     )
@@ -221,7 +214,6 @@ def get_google_redirect_url():
         )
 
     return redirect_url.rstrip("/")
-
 
 # ============================================================
 # GOOGLE LOGIN
