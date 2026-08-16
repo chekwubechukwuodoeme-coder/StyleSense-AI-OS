@@ -134,6 +134,10 @@ DEFAULT_SESSION_STATE = {
 
     "open_workspace": False,
 
+    "fashion_news_articles": [],
+
+    "fashion_news_generated": False,
+
     # ========================================================
     # FASHION INSPIRATION → DESIGN STUDIO
     # ========================================================
