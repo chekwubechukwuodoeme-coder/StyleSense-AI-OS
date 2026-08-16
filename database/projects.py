@@ -1,197 +1,106 @@
 from database.database import get_connection
 
 
-# ============================================================
-# INITIALIZE PROJECTS TABLE
-# ============================================================
-
 def init_projects_table():
 
     conn = get_connection()
     cursor = conn.cursor()
 
-    # --------------------------------------------------------
-    # CREATE TABLE IF IT DOES NOT EXIST
-    # --------------------------------------------------------
-
-    cursor.execute(
-        """
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS projects (
-
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-
             title TEXT NOT NULL,
-
             description TEXT,
-
             category TEXT,
-
             cover_image TEXT,
-
-            created_at
-                TIMESTAMP
-                DEFAULT CURRENT_TIMESTAMP
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
-        """
-    )
-
-    # --------------------------------------------------------
-    # CHECK EXISTING COLUMNS
-    # --------------------------------------------------------
-
-    cursor.execute(
-        "PRAGMA table_info(projects)"
-    )
-
-    existing_columns = {
-        row[1]
-        for row in cursor.fetchall()
-    }
-
-    # --------------------------------------------------------
-    # ADD MISSING COLUMNS
-    # --------------------------------------------------------
-
-    if "title" not in existing_columns:
-
-        cursor.execute(
-            """
-            ALTER TABLE projects
-            ADD COLUMN title TEXT
-            """
-        )
-
-    if "description" not in existing_columns:
-
-        cursor.execute(
-            """
-            ALTER TABLE projects
-            ADD COLUMN description TEXT
-            """
-        )
-
-    if "category" not in existing_columns:
-
-        cursor.execute(
-            """
-            ALTER TABLE projects
-            ADD COLUMN category TEXT
-            """
-        )
-
-    if "cover_image" not in existing_columns:
-
-        cursor.execute(
-            """
-            ALTER TABLE projects
-            ADD COLUMN cover_image TEXT
-            """
-        )
-
-    if "created_at" not in existing_columns:
-
-        cursor.execute(
-            """
-            ALTER TABLE projects
-            ADD COLUMN created_at
-            TIMESTAMP
-            """
-        )
+    """)
 
     conn.commit()
     conn.close()
 
 
-# ============================================================
-# CREATE PROJECT
-# ============================================================
+def create_project(title, description, category):
 
-def create_project(
-    title,
-    description,
-    category
-):
+    title = (title or "").strip()
+    description = (description or "").strip()
+    category = (category or "").strip()
+
+    if not title:
+        raise ValueError("Project title cannot be empty.")
 
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute(
-        """
-        INSERT INTO projects (
-            title,
-            description,
-            category
+    try:
+
+        cursor.execute(
+            """
+            INSERT INTO projects (
+                title,
+                description,
+                category,
+                cover_image
+            )
+            VALUES (?, ?, ?, ?)
+            """,
+            (
+                title,
+                description,
+                category,
+                None
+            )
         )
-        VALUES (?, ?, ?)
-        """,
-        (
-            title,
-            description,
-            category
-        )
-    )
 
-    conn.commit()
+        conn.commit()
 
-    project_id = cursor.lastrowid
+        return cursor.lastrowid
 
-    conn.close()
+    finally:
+        conn.close()
 
-    return project_id
-
-
-# ============================================================
-# GET PROJECTS
-# ============================================================
 
 def get_projects():
 
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute(
-        """
-        SELECT
-            id,
-            title,
-            description,
-            category,
-            created_at
-        FROM projects
-        ORDER BY created_at DESC
-        """
-    )
+    try:
 
-    projects = cursor.fetchall()
+        cursor.execute("""
+            SELECT
+                id,
+                title,
+                description,
+                category,
+                created_at
+            FROM projects
+            ORDER BY created_at DESC
+        """)
 
-    conn.close()
+        return cursor.fetchall()
 
-    return projects
+    finally:
+        conn.close()
 
-
-# ============================================================
-# DELETE PROJECT
-# ============================================================
 
 def delete_project(project_id):
 
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute(
-        """
-        DELETE FROM projects
-        WHERE id = ?
-        """,
-        (project_id,)
-    )
+    try:
 
-    conn.commit()
-    conn.close()
+        cursor.execute(
+            "DELETE FROM projects WHERE id = ?",
+            (project_id,)
+        )
 
+        conn.commit()
 
-# ============================================================
-# INITIALIZE
-# ============================================================
+    finally:
+        conn.close()
+
 
 init_projects_table()
