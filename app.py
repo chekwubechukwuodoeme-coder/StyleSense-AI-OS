@@ -9,6 +9,7 @@ from database.users import (
 )
 
 from views.auth import render_auth
+
 from views.profiles import render_profiles
 from views.fashion_cofounder import render_fashion_cofounder
 from views.dashboard import render_dashboard
@@ -79,7 +80,7 @@ PAGES = {
 
 
 # ============================================================
-# CSS
+# PATHS
 # ============================================================
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -92,34 +93,38 @@ CSS_PATH = (
 )
 
 
+# ============================================================
+# CSS
+# ============================================================
+
 def load_css():
 
-    if CSS_PATH.exists():
-
-        try:
-
-            with open(
-                CSS_PATH,
-                "r",
-                encoding="utf-8"
-            ) as f:
-
-                st.markdown(
-                    f"<style>{f.read()}</style>",
-                    unsafe_allow_html=True
-                )
-
-        except Exception as e:
-
-            print(
-                "CSS LOAD ERROR:",
-                repr(e)
-            )
-
-    else:
+    if not CSS_PATH.exists():
 
         print(
             f"CSS file not found: {CSS_PATH}"
+        )
+
+        return
+
+    try:
+
+        with open(
+            CSS_PATH,
+            "r",
+            encoding="utf-8"
+        ) as f:
+
+            st.markdown(
+                f"<style>{f.read()}</style>",
+                unsafe_allow_html=True
+            )
+
+    except Exception as e:
+
+        print(
+            "CSS LOAD ERROR:",
+            repr(e)
         )
 
 
@@ -130,70 +135,76 @@ load_css()
 # SESSION STATE
 # ============================================================
 
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
+DEFAULT_SESSION_STATE = {
 
-if "user_id" not in st.session_state:
-    st.session_state.user_id = None
+    "logged_in": False,
 
-if "user_name" not in st.session_state:
-    st.session_state.user_name = None
+    "user_id": None,
 
-if "user_email" not in st.session_state:
-    st.session_state.user_email = None
+    "user_name": None,
 
-if "auth_page" not in st.session_state:
-    st.session_state.auth_page = "login"
+    "user_email": None,
 
-if "saved_designs" not in st.session_state:
-    st.session_state.saved_designs = []
+    "auth_page": "login",
 
-if "saved_inspirations" not in st.session_state:
-    st.session_state.saved_inspirations = []
+    "saved_designs": [],
 
-if "collections" not in st.session_state:
-    st.session_state.collections = []
+    "saved_inspirations": [],
 
-if "messages" not in st.session_state:
-    st.session_state.messages = []
+    "collections": [],
 
-if "current_design" not in st.session_state:
-    st.session_state.current_design = ""
+    "messages": [],
 
-if "current_image" not in st.session_state:
-    st.session_state.current_image = None
+    "current_design": "",
 
-if "current_project" not in st.session_state:
-    st.session_state.current_project = None
+    "current_image": None,
 
-if "open_workspace" not in st.session_state:
-    st.session_state.open_workspace = False
+    "current_project": None,
+
+    "open_workspace": False,
+}
+
+
+for key, value in DEFAULT_SESSION_STATE.items():
+
+    if key not in st.session_state:
+
+        st.session_state[key] = value
 
 
 # ============================================================
 # GOOGLE OAUTH CALLBACK
 # ============================================================
 
-# Handle OAuth BEFORE rendering the main application.
+# IMPORTANT:
+# There is ONE Google callback handler in the application.
+#
+# Do not also handle the callback inside views/auth.py.
+
 
 if not st.session_state.logged_in:
 
-    oauth_error = st.query_params.get("error")
+    oauth_error = st.query_params.get(
+        "error"
+    )
 
     oauth_error_description = st.query_params.get(
         "error_description"
     )
 
-    oauth_code = st.query_params.get("code")
+    oauth_code = st.query_params.get(
+        "code"
+    )
 
     # --------------------------------------------------------
-    # GOOGLE / SUPABASE RETURNED AN ERROR
+    # OAUTH ERROR
     # --------------------------------------------------------
 
     if oauth_error:
 
         st.error(
-            f"Google authentication failed: {oauth_error}"
+            f"Google authentication failed: "
+            f"{oauth_error}"
         )
 
         if oauth_error_description:
@@ -207,7 +218,7 @@ if not st.session_state.logged_in:
         st.stop()
 
     # --------------------------------------------------------
-    # GOOGLE / SUPABASE RETURNED AUTHORIZATION CODE
+    # OAUTH CODE
     # --------------------------------------------------------
 
     if oauth_code:
@@ -234,7 +245,6 @@ if not st.session_state.logged_in:
 
             st.session_state.auth_page = "login"
 
-            # Remove OAuth parameters
             st.query_params.clear()
 
             st.rerun()
@@ -251,8 +261,7 @@ if not st.session_state.logged_in:
             )
 
             st.info(
-                "Check the Streamlit Cloud logs for "
-                "GOOGLE CALLBACK ERROR."
+                "Please start Google sign-in again."
             )
 
             st.query_params.clear()
@@ -358,11 +367,9 @@ with st.sidebar:
 
 if page == "🖥 Workspace":
 
-    if (
-        st.session_state.get(
-            "current_project"
-        ) is None
-    ):
+    if st.session_state.get(
+        "current_project"
+    ) is None:
 
         st.warning(
             "Open a project first."
@@ -379,7 +386,9 @@ if page == "🖥 Workspace":
 
 else:
 
-    selected_page = PAGES.get(page)
+    selected_page = PAGES.get(
+        page
+    )
 
     if selected_page:
 

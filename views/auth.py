@@ -4,8 +4,8 @@ from database.users import (
     create_user,
     authenticate_user,
     get_google_login_url,
-    handle_google_callback,
 )
+
 
 # ============================================================
 # REGISTER
@@ -72,6 +72,10 @@ def render_register():
         use_container_width=True
     ):
 
+        # ----------------------------------------------------
+        # VALIDATION
+        # ----------------------------------------------------
+
         if not full_name.strip():
 
             st.error(
@@ -96,6 +100,14 @@ def render_register():
 
             return
 
+        if len(password) < 6:
+
+            st.error(
+                "Password must be at least 6 characters."
+            )
+
+            return
+
         if password != confirm_password:
 
             st.error(
@@ -104,11 +116,19 @@ def render_register():
 
             return
 
+        # ----------------------------------------------------
+        # CREATE USER
+        # ----------------------------------------------------
+
         success, result = create_user(
             full_name=full_name,
             email=email,
             password=password
         )
+
+        # ----------------------------------------------------
+        # SUCCESS
+        # ----------------------------------------------------
 
         if success:
 
@@ -129,9 +149,14 @@ def render_register():
                 "Supabase, check your email before logging in."
             )
 
+            # Move user to login page
             st.session_state.auth_page = "login"
 
             st.rerun()
+
+        # ----------------------------------------------------
+        # ERROR
+        # ----------------------------------------------------
 
         else:
 
@@ -139,13 +164,15 @@ def render_register():
                 f"❌ {result}"
             )
 
-    # --------------------------------------------------------
+    # ========================================================
     # GOOGLE SIGN UP
-    # --------------------------------------------------------
+    # ========================================================
 
     st.divider()
 
-    st.subheader("Or")
+    st.subheader(
+        "Or"
+    )
 
     google_url = get_google_login_url()
 
@@ -164,9 +191,9 @@ def render_register():
             "Please check your OAuth configuration."
         )
 
-    # --------------------------------------------------------
+    # ========================================================
     # LOGIN
-    # --------------------------------------------------------
+    # ========================================================
 
     st.divider()
 
@@ -216,7 +243,7 @@ def render_login():
     )
 
     # --------------------------------------------------------
-    # LOGIN
+    # EMAIL / PASSWORD LOGIN
     # --------------------------------------------------------
 
     if st.button(
@@ -224,6 +251,10 @@ def render_login():
         type="primary",
         use_container_width=True
     ):
+
+        # ----------------------------------------------------
+        # VALIDATION
+        # ----------------------------------------------------
 
         if not email.strip():
 
@@ -241,10 +272,18 @@ def render_login():
 
             return
 
+        # ----------------------------------------------------
+        # AUTHENTICATE
+        # ----------------------------------------------------
+
         user = authenticate_user(
             email=email,
             password=password
         )
+
+        # ----------------------------------------------------
+        # LOGIN SUCCESS
+        # ----------------------------------------------------
 
         if user:
 
@@ -255,9 +294,19 @@ def render_login():
             ) = user
 
             st.session_state.logged_in = True
-            st.session_state.user_id = user_id
-            st.session_state.user_name = full_name
-            st.session_state.user_email = user_email
+
+            st.session_state.user_id = (
+                user_id
+            )
+
+            st.session_state.user_name = (
+                full_name
+            )
+
+            st.session_state.user_email = (
+                user_email
+            )
+
             st.session_state.auth_page = "login"
 
             st.success(
@@ -265,6 +314,10 @@ def render_login():
             )
 
             st.rerun()
+
+        # ----------------------------------------------------
+        # LOGIN FAILED
+        # ----------------------------------------------------
 
         else:
 
@@ -277,9 +330,9 @@ def render_login():
                 "make sure you have verified your email."
             )
 
-    # --------------------------------------------------------
+    # ========================================================
     # GOOGLE LOGIN
-    # --------------------------------------------------------
+    # ========================================================
 
     st.divider()
 
@@ -304,9 +357,9 @@ def render_login():
             "Please check your OAuth configuration."
         )
 
-    # --------------------------------------------------------
+    # ========================================================
     # REGISTER
-    # --------------------------------------------------------
+    # ========================================================
 
     st.divider()
 
@@ -324,60 +377,27 @@ def render_login():
 # AUTH ROUTER
 # ============================================================
 
-def handle_google_oauth_callback():
-
-    code = st.query_params.get("code")
-
-    if not code:
-        return
-
-    user = handle_google_callback(code)
-
-    if not user:
-
-        st.error(
-            "Google authentication failed."
-        )
-
-        st.error(
-            "The authorization code could not be "
-            "exchanged for a Supabase session."
-        )
-
-        return
-
-    st.session_state.logged_in = True
-    st.session_state.user_id = user["id"]
-    st.session_state.user_name = user["full_name"]
-    st.session_state.user_email = user["email"]
-    st.session_state.auth_page = "login"
-
-    st.query_params.clear()
-
-    st.rerun()
-
-
-# ============================================================
-# AUTH ROUTER
-# ============================================================
-
 def render_auth():
 
-    # Check if Google sent us back an authorization code
-    if "code" in st.query_params:
+    # --------------------------------------------------------
+    # DEFAULT AUTH PAGE
+    # --------------------------------------------------------
 
-        handle_google_oauth_callback()
-
-        return
-
-    # Normal login/register page
     if "auth_page" not in st.session_state:
 
         st.session_state.auth_page = "login"
 
+    # --------------------------------------------------------
+    # REGISTER
+    # --------------------------------------------------------
+
     if st.session_state.auth_page == "register":
 
         render_register()
+
+    # --------------------------------------------------------
+    # LOGIN
+    # --------------------------------------------------------
 
     else:
 

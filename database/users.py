@@ -12,33 +12,30 @@ SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 
 
 # ============================================================
-# STREAMLIT SESSION STORAGE
+# STREAMLIT STORAGE
 # ============================================================
 
 class StreamlitStorage:
     """
-    Storage adapter for Supabase Auth.
+    Per-user/session storage for Supabase Auth.
 
-    Supabase uses this storage for PKCE information such as
-    the code verifier and for authentication session data.
-
-    Streamlit session_state keeps this data isolated per user
-    session instead of sharing it globally.
+    This stores the PKCE verifier and Supabase session
+    inside the current Streamlit session.
     """
 
     def get_item(self, key):
         return st.session_state.get(
-            f"supabase_storage_{key}"
+            f"_supabase_{key}"
         )
 
     def set_item(self, key, value):
         st.session_state[
-            f"supabase_storage_{key}"
+            f"_supabase_{key}"
         ] = value
 
     def remove_item(self, key):
         st.session_state.pop(
-            f"supabase_storage_{key}",
+            f"_supabase_{key}",
             None
         )
 
@@ -49,9 +46,10 @@ class StreamlitStorage:
 
 def get_supabase():
     """
-    Create one Supabase client per Streamlit session.
+    Create one Supabase client for the current Streamlit
+    browser session.
 
-    The client is NOT globally cached because authentication
+    DO NOT use st.cache_resource here because authentication
     state must never be shared between users.
     """
 
@@ -74,17 +72,10 @@ def get_supabase():
 
 
 # ============================================================
-# REGISTER USER
+# REGISTER
 # ============================================================
 
-def create_user(
-    full_name,
-    email,
-    password
-):
-    """
-    Create a new StyleSense user using Supabase Auth.
-    """
+def create_user(full_name, email, password):
 
     full_name = (full_name or "").strip()
     email = (email or "").strip().lower()
@@ -134,32 +125,26 @@ def create_user(
 
     except Exception as e:
 
-        error_message = str(e)
-        error_lower = error_message.lower()
+        error = str(e)
+        lower = error.lower()
 
         if (
-            "already registered" in error_lower
-            or "user already registered" in error_lower
+            "already registered" in lower
+            or "user already registered" in lower
         ):
             return (
                 False,
                 "An account with this email already exists."
             )
 
-        return False, error_message
+        return False, error
 
 
 # ============================================================
-# EMAIL / PASSWORD LOGIN
+# EMAIL LOGIN
 # ============================================================
 
-def authenticate_user(
-    email,
-    password
-):
-    """
-    Authenticate a user using Supabase email/password.
-    """
+def authenticate_user(email, password):
 
     email = (email or "").strip().lower()
     password = password or ""
@@ -183,7 +168,6 @@ def authenticate_user(
 
         user = response.user
 
-        user_id = user.id
         user_email = user.email
 
         full_name = None
@@ -204,7 +188,7 @@ def authenticate_user(
             )
 
         return (
-            user_id,
+            user.id,
             full_name,
             user_email
         )
@@ -224,16 +208,11 @@ def authenticate_user(
 # ============================================================
 
 def get_google_redirect_url():
-    """
-    Get the deployed Streamlit redirect URL.
-    """
 
     redirect_url = st.secrets.get(
         "GOOGLE_REDIRECT_URL"
     )
 
-    # Fall back to APP_URL if GOOGLE_REDIRECT_URL
-    # has not been added separately.
     if not redirect_url:
 
         redirect_url = st.secrets.get(
@@ -251,16 +230,10 @@ def get_google_redirect_url():
 
 
 # ============================================================
-# GOOGLE LOGIN
+# GOOGLE LOGIN URL
 # ============================================================
 
 def get_google_login_url():
-    """
-    Generate the Google OAuth login URL.
-
-    The same Streamlit session storage is used by Supabase
-    to preserve the PKCE verifier.
-    """
 
     try:
 
@@ -278,13 +251,11 @@ def get_google_login_url():
         )
 
         if not response:
-
             raise RuntimeError(
                 "Supabase did not return an OAuth response."
             )
 
         if not response.url:
-
             raise RuntimeError(
                 "Supabase did not return a Google OAuth URL."
             )
@@ -306,16 +277,11 @@ def get_google_login_url():
 # ============================================================
 
 def handle_google_callback(oauth_code):
-    """
-    Exchange the Google/Supabase OAuth authorization code
-    for a Supabase session.
-    """
 
     if not oauth_code:
 
         print(
-            "GOOGLE CALLBACK ERROR: "
-            "Missing OAuth code."
+            "GOOGLE CALLBACK ERROR: Missing OAuth code."
         )
 
         return None
@@ -324,9 +290,9 @@ def handle_google_callback(oauth_code):
 
         supabase = get_supabase()
 
-        # ----------------------------------------------------
-        # EXCHANGE AUTHORIZATION CODE
-        # ----------------------------------------------------
+        print(
+            "GOOGLE CALLBACK: attempting code exchange..."
+        )
 
         response = supabase.auth.exchange_code_for_session(
             {
@@ -343,15 +309,19 @@ def handle_google_callback(oauth_code):
 
             return None
 
-        # ----------------------------------------------------
-        # GET USER
-        # ----------------------------------------------------
-
         user = None
+
+        # ----------------------------------------------------
+        # RESPONSE USER
+        # ----------------------------------------------------
 
         if hasattr(response, "user"):
 
             user = response.user
+
+        # ----------------------------------------------------
+        # SESSION USER
+        # ----------------------------------------------------
 
         if user is None and hasattr(
             response,
@@ -376,12 +346,11 @@ def handle_google_callback(oauth_code):
             current_user = get_current_user()
 
             if current_user:
-
                 return current_user
 
             print(
                 "GOOGLE CALLBACK ERROR: "
-                "Supabase returned no authenticated user."
+                "No authenticated user returned."
             )
 
             return None
@@ -429,13 +398,10 @@ def handle_google_callback(oauth_code):
 
 
 # ============================================================
-# GET CURRENT USER
+# CURRENT USER
 # ============================================================
 
 def get_current_user():
-    """
-    Return the currently authenticated Supabase user.
-    """
 
     try:
 
@@ -489,10 +455,6 @@ def get_current_user():
 # ============================================================
 
 def get_user(user_id):
-    """
-    Return the currently authenticated user only if
-    their Supabase ID matches user_id.
-    """
 
     try:
 
@@ -525,9 +487,6 @@ def get_user(user_id):
 # ============================================================
 
 def logout_user():
-    """
-    Sign out the current Supabase user.
-    """
 
     try:
 
@@ -535,21 +494,28 @@ def logout_user():
 
         supabase.auth.sign_out()
 
-        # Clear the Streamlit-side Supabase client/storage
-        # so a future login starts with a clean session.
-
+        # Clear Supabase client
         st.session_state.pop(
             "supabase_client",
             None
         )
 
-        for key in list(st.session_state.keys()):
+        # Clear Supabase storage
+        for key in list(
+            st.session_state.keys()
+        ):
 
             if key.startswith(
-                "supabase_storage_"
+                "_supabase_"
             ):
 
                 del st.session_state[key]
+
+        # Clear application login state
+        st.session_state.logged_in = False
+        st.session_state.user_id = None
+        st.session_state.user_name = None
+        st.session_state.user_email = None
 
         return True
 
