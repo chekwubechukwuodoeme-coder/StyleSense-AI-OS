@@ -232,14 +232,9 @@ def authenticate_user(
 def get_google_login_url():
 
     try:
-
         supabase = get_supabase()
 
-        redirect_url = st.secrets.get(
-            "GOOGLE_REDIRECT_URL",
-            "http://localhost:8501"
-        ).rstrip("/")
-
+        redirect_url = st.secrets["GOOGLE_REDIRECT_URL"].rstrip("/")
 
         response = supabase.auth.sign_in_with_oauth(
             {
@@ -253,10 +248,8 @@ def get_google_login_url():
         return response.url
 
     except Exception as e:
-
-         print("GOOGLE LOGIN ERROR:", repr(e))
-
-         return None
+        print("GOOGLE LOGIN ERROR:", repr(e))
+        return None
 
 
 # ============================================================
@@ -269,7 +262,6 @@ def handle_google_callback(oauth_code):
         return None
 
     try:
-
         supabase = get_supabase()
 
         response = supabase.auth.exchange_code_for_session(
@@ -284,7 +276,6 @@ def handle_google_callback(oauth_code):
             user = response.user
 
         if user is None and hasattr(response, "session"):
-
             session = response.session
 
             if session and hasattr(session, "user"):
@@ -296,14 +287,17 @@ def handle_google_callback(oauth_code):
         full_name = None
 
         if user.user_metadata:
-
             full_name = (
                 user.user_metadata.get("full_name")
                 or user.user_metadata.get("name")
             )
 
         if not full_name:
-            full_name = user.email.split("@")[0]
+            full_name = (
+                user.email.split("@")[0]
+                if user.email
+                else "User"
+            )
 
         return {
             "id": user.id,
@@ -312,9 +306,10 @@ def handle_google_callback(oauth_code):
         }
 
     except Exception as e:
-
-        print("GOOGLE CALLBACK ERROR:", repr(e))
-
+        print(
+            "GOOGLE CALLBACK ERROR:",
+            repr(e)
+        )
         return None
 
         # ----------------------------------------------------
