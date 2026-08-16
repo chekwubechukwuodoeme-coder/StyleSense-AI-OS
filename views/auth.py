@@ -3,7 +3,7 @@ import streamlit as st
 from database.users import (
     create_user,
     authenticate_user,
-    sign_in_with_google,
+    get_google_login_url,
 )
 
 
@@ -21,17 +21,29 @@ def render_register():
 
     st.divider()
 
+    # --------------------------------------------------------
+    # FULL NAME
+    # --------------------------------------------------------
+
     full_name = st.text_input(
         "Full Name",
         placeholder="Enter your full name",
         key="register_full_name"
     )
 
+    # --------------------------------------------------------
+    # EMAIL
+    # --------------------------------------------------------
+
     email = st.text_input(
         "Email",
         placeholder="you@example.com",
         key="register_email"
     )
+
+    # --------------------------------------------------------
+    # PASSWORD
+    # --------------------------------------------------------
 
     password = st.text_input(
         "Password",
@@ -40,11 +52,19 @@ def render_register():
         key="register_password"
     )
 
+    # --------------------------------------------------------
+    # CONFIRM PASSWORD
+    # --------------------------------------------------------
+
     confirm_password = st.text_input(
         "Confirm Password",
         type="password",
         key="register_confirm_password"
     )
+
+    # --------------------------------------------------------
+    # CREATE ACCOUNT
+    # --------------------------------------------------------
 
     if st.button(
         "Create Account",
@@ -52,9 +72,35 @@ def render_register():
         use_container_width=True
     ):
 
+        if not full_name:
+
+            st.error(
+                "Please enter your full name."
+            )
+
+            return
+
+        if not email:
+
+            st.error(
+                "Please enter your email."
+            )
+
+            return
+
+        if not password:
+
+            st.error(
+                "Please enter a password."
+            )
+
+            return
+
         if password != confirm_password:
 
-            st.error("Passwords do not match.")
+            st.error(
+                "Passwords do not match."
+            )
 
             return
 
@@ -66,7 +112,16 @@ def render_register():
 
         if success:
 
-            st.success(result)
+            st.success(
+                f"✅ {result}"
+                if isinstance(result, str)
+                else "✅ Account created successfully!"
+            )
+
+            st.info(
+                "If email confirmation is enabled in "
+                "Supabase, check your email before logging in."
+            )
 
             st.session_state.auth_page = "login"
 
@@ -74,12 +129,45 @@ def render_register():
 
         else:
 
-            st.error(result)
+            st.error(
+                f"❌ {result}"
+            )
+
+    # --------------------------------------------------------
+    # GOOGLE SIGN UP
+    # --------------------------------------------------------
+
+    st.divider()
+
+    st.subheader(
+        "Or"
+    )
+
+    google_url = get_google_login_url()
+
+    if google_url:
+
+        st.link_button(
+            "🔵 Sign up with Google",
+            google_url,
+            use_container_width=True
+        )
+
+    else:
+
+        st.warning(
+            "Google sign-in is currently unavailable."
+        )
+
+    # --------------------------------------------------------
+    # LOGIN
+    # --------------------------------------------------------
 
     st.divider()
 
     if st.button(
-        "Already have an account? Login"
+        "Already have an account? Login",
+        use_container_width=True
     ):
 
         st.session_state.auth_page = "login"
@@ -101,17 +189,30 @@ def render_login():
 
     st.divider()
 
+    # --------------------------------------------------------
+    # EMAIL
+    # --------------------------------------------------------
+
     email = st.text_input(
         "Email",
         placeholder="you@example.com",
         key="login_email"
     )
 
+    # --------------------------------------------------------
+    # PASSWORD
+    # --------------------------------------------------------
+
     password = st.text_input(
         "Password",
         type="password",
+        placeholder="Enter your password",
         key="login_password"
     )
+
+    # --------------------------------------------------------
+    # LOGIN
+    # --------------------------------------------------------
 
     if st.button(
         "🔐 Login",
@@ -119,29 +220,48 @@ def render_login():
         use_container_width=True
     ):
 
-        if not email or not password:
+        if not email:
 
             st.error(
-                "Please enter your email and password."
+                "Please enter your email."
             )
 
             return
 
-        success, result = authenticate_user(
+        if not password:
+
+            st.error(
+                "Please enter your password."
+            )
+
+            return
+
+        user = authenticate_user(
             email=email,
             password=password
         )
 
-        if success:
+        if user:
 
-            user_id = result["id"]
-            full_name = result["full_name"]
-            user_email = result["email"]
+            (
+                user_id,
+                full_name,
+                user_email
+            ) = user
+
+            # ----------------------------------------------
+            # SESSION
+            # ----------------------------------------------
 
             st.session_state.logged_in = True
+
             st.session_state.user_id = user_id
+
             st.session_state.user_name = full_name
+
             st.session_state.user_email = user_email
+
+            st.session_state.auth_page = "login"
 
             st.success(
                 f"Welcome back, {full_name}! 👋"
@@ -151,40 +271,50 @@ def render_login():
 
         else:
 
-            st.error(f"❌ {result}")
+            st.error(
+                "❌ Invalid email or password."
+            )
+
+            st.info(
+                "If you just created your account, "
+                "make sure you have verified your email."
+            )
+
+    # --------------------------------------------------------
+    # GOOGLE LOGIN
+    # --------------------------------------------------------
+
+    st.divider()
+
+    st.subheader(
+        "Or continue with"
+    )
+
+    google_url = get_google_login_url()
+
+    if google_url:
+
+        st.link_button(
+            "🔵 Continue with Google",
+            google_url,
+            use_container_width=True
+        )
+
+    else:
+
+        st.warning(
+            "Google sign-in is currently unavailable."
+        )
+
+    # --------------------------------------------------------
+    # REGISTER
+    # --------------------------------------------------------
 
     st.divider()
 
     if st.button(
-        "🔵 Continue with Google",
+        "Create a new account",
         use_container_width=True
-    ):
-
-        google_url = sign_in_with_google()
-
-        if google_url:
-
-            if google_url.startswith("ERROR:"):
-
-                st.error(google_url)
-
-            else:
-
-                st.markdown(
-                    f"""
-                    <meta http-equiv="refresh" content="0; url={google_url}">
-                    """,
-                    unsafe_allow_html=True
-                )
-
-        else:
-
-            st.error("Unable to start Google login.")
-
-    st.divider()
-
-    if st.button(
-        "Create a new account"
     ):
 
         st.session_state.auth_page = "register"
@@ -202,7 +332,10 @@ def render_auth():
 
         st.session_state.auth_page = "login"
 
-    if st.session_state.auth_page == "register":
+    if (
+        st.session_state.auth_page
+        == "register"
+    ):
 
         render_register()
 

@@ -3,6 +3,11 @@ from pathlib import Path
 
 from database.database import init_database
 
+from database.users import (
+    get_current_user,
+    handle_google_callback,
+)
+
 from views.auth import render_auth
 from views.profiles import render_profiles
 from views.fashion_cofounder import render_fashion_cofounder
@@ -25,6 +30,17 @@ from views.design_studio import render_design_studio
 from views.ai_team import render_ai_team
 from views.workspace import render_workspace
 from views.projects import render_projects
+
+
+# ============================================================
+# PAGE CONFIG
+# ============================================================
+
+st.set_page_config(
+    page_title="StyleSense AI OS",
+    page_icon="👗",
+    layout="wide"
+)
 
 
 # ============================================================
@@ -63,42 +79,59 @@ PAGES = {
 
 
 # ============================================================
-# PAGE CONFIG
-# ============================================================
-
-st.set_page_config(
-    page_title="StyleSense AI OS",
-    page_icon="👗",
-    layout="wide"
-)
-
-
-# ============================================================
 # CSS
 # ============================================================
 
+BASE_DIR = Path(__file__).resolve().parent
+
+CSS_PATH = (
+    BASE_DIR
+    / "assets"
+    / "css"
+    / "style.css"
+)
+
+
 def load_css():
 
-    try:
+    if CSS_PATH.exists():
 
-        with open("assets/css/style.css", encoding="utf-8") as f:
+        try:
 
-            st.markdown(
-                f"<style>{f.read()}</style>",
-                unsafe_allow_html=True
+            with open(
+                CSS_PATH,
+                "r",
+                encoding="utf-8"
+            ) as f:
+
+                st.markdown(
+                    f"<style>{f.read()}</style>",
+                    unsafe_allow_html=True
+                )
+
+        except Exception as e:
+
+            print(
+                "CSS LOAD ERROR:",
+                repr(e)
             )
 
-    except FileNotFoundError:
+    else:
 
-        st.warning("CSS file not found.")
+        # Don't interrupt the application
+        # just because CSS is missing.
+
+        print(
+            f"CSS file not found: {CSS_PATH}"
+        )
 
 
 load_css()
 
 
-# ==========================
+# ============================================================
 # SESSION STATE
-# ==========================
+# ============================================================
 
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
@@ -139,86 +172,150 @@ if "current_project" not in st.session_state:
 if "open_workspace" not in st.session_state:
     st.session_state.open_workspace = False
 
-# ==========================
+
+# ============================================================
 # SIDEBAR
-# ==========================
+# ============================================================
 
 with st.sidebar:
 
-    logo_path = Path("assets/logo.png")
+    logo_path = (
+        BASE_DIR
+        / "assets"
+        / "logo.png"
+    )
 
     if logo_path.exists():
-        st.image(str(logo_path), width=80)
 
-    st.title("👗 StyleSense AI OS")
-    st.caption("Powered by Chekwube Empire")
-    st.success("🟢 OpenAI Connected")
+        st.image(
+            str(logo_path),
+            width=80
+        )
 
-    navigation = ["🖥 Workspace"] + list(PAGES.keys())
+    st.title(
+        "👗 StyleSense AI OS"
+    )
+
+    st.caption(
+        "Powered by Chekwube Empire"
+    )
+
+    st.success(
+        "🟢 OpenAI Connected"
+    )
+
+    navigation = (
+        ["🖥 Workspace"]
+        + list(PAGES.keys())
+    )
 
     # Workspace was requested after opening a project
-    if st.session_state.get("open_workspace", False):
+    if st.session_state.get(
+        "open_workspace",
+        False
+    ):
 
         page = "🖥 Workspace"
 
-        # Reset the flag so normal navigation returns afterward
-        st.session_state.open_workspace = False
+        st.session_state.open_workspace = (
+            False
+        )
 
     else:
 
-        # Normal navigation
         page = st.radio(
             "Navigation",
             navigation,
-            index=1,  # Dashboard is the first normal page
+            index=1,
             key="main_navigation"
         )
 
 
 # ==========================
-# AUTHENTICATION
+# GOOGLE OAUTH CALLBACK
 # ==========================
 
 if not st.session_state.logged_in:
 
-    # Check if Supabase already has an authenticated user
-    google_user = None
+    oauth_code = st.query_params.get("code")
 
-    try:
-        from database.users import get_current_user
+    if oauth_code:
 
-        google_user = get_current_user()
+        google_user = handle_google_callback(
+            oauth_code
+        )
 
-    except Exception as e:
+        if google_user:
 
-        print("AUTH CHECK ERROR:", e)
+            st.session_state.logged_in = True
 
-    # If Google/Supabase authentication succeeded,
-    # create the Streamlit session
-    if google_user:
+            st.session_state.user_id = (
+                google_user["id"]
+            )
+
+            st.session_state.user_name = (
+                google_user["full_name"]
+            )
+
+            st.session_state.user_email = (
+                google_user["email"]
+            )
+
+            st.query_params.clear()
+
+            st.rerun()
+
+        else:
+
+            st.query_params.clear()
+
+            st.error(
+                "Google authentication failed. "
+                "Please try again."
+            )
+
+            st.stop()
+
+
+# ==========================
+# CHECK EXISTING SUPABASE SESSION
+# ==========================
+
+if not st.session_state.logged_in:
+
+    current_user = get_current_user()
+
+    if current_user:
 
         st.session_state.logged_in = True
-        st.session_state.user_id = google_user["id"]
-        st.session_state.user_name = google_user["full_name"]
-        st.session_state.user_email = google_user["email"]
+        st.session_state.user_id = current_user["id"]
+        st.session_state.user_name = current_user["full_name"]
+        st.session_state.user_email = current_user["email"]
 
         st.rerun()
 
-    # Otherwise show the normal login/register page
-    render_auth()
+    else:
 
-    st.stop()
+        render_auth()
+
+        st.stop()
 
 
-# ==========================
+# ============================================================
 # PAGE ROUTING
-# ==========================
+# ============================================================
 
 if page == "🖥 Workspace":
 
-    if st.session_state.get("current_project") is None:
+    if (
+        st.session_state.get(
+            "current_project"
+        ) is None
+    ):
 
-        st.warning("Open a project first.")
+        st.warning(
+            "Open a project first."
+        )
 
         st.info(
             "Go to 📂 Projects and click "
