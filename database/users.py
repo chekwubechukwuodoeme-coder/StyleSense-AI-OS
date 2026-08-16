@@ -131,7 +131,6 @@ def authenticate_user(
     Authenticate a user using Supabase email/password.
 
     Returns:
-
         (
             user_id,
             full_name,
@@ -169,6 +168,7 @@ def authenticate_user(
         full_name = None
 
         if user.user_metadata:
+
             full_name = (
                 user.user_metadata.get("full_name")
                 or user.user_metadata.get("name")
@@ -203,11 +203,17 @@ def authenticate_user(
 # ============================================================
 
 def get_google_redirect_url():
+    """
+    Get the deployed Streamlit redirect URL
+    from Streamlit Cloud secrets.
+    """
+
     redirect_url = st.secrets.get(
         "GOOGLE_REDIRECT_URL"
     )
 
     if not redirect_url:
+
         raise RuntimeError(
             "GOOGLE_REDIRECT_URL is missing from "
             "Streamlit secrets."
@@ -215,11 +221,15 @@ def get_google_redirect_url():
 
     return redirect_url.rstrip("/")
 
+
 # ============================================================
 # GOOGLE LOGIN
 # ============================================================
 
 def get_google_login_url():
+    """
+    Generate the Google OAuth login URL.
+    """
 
     try:
 
@@ -237,11 +247,13 @@ def get_google_login_url():
         )
 
         if not response:
+
             raise RuntimeError(
                 "Supabase did not return an OAuth response."
             )
 
         if not response.url:
+
             raise RuntimeError(
                 "Supabase did not return a Google OAuth URL."
             )
@@ -249,10 +261,6 @@ def get_google_login_url():
         return response.url
 
     except Exception as e:
-
-        st.error(
-            f"GOOGLE LOGIN ERROR: {repr(e)}"
-        )
 
         print(
             "GOOGLE LOGIN ERROR:",
@@ -268,8 +276,8 @@ def get_google_login_url():
 
 def handle_google_callback(oauth_code):
     """
-    Exchange the Google OAuth authorization code
-    for a Supabase session and return the user.
+    Exchange the Google/Supabase OAuth authorization code
+    for a Supabase session and return the authenticated user.
 
     Returns:
         {
@@ -282,7 +290,12 @@ def handle_google_callback(oauth_code):
     """
 
     if not oauth_code:
-        print("GOOGLE CALLBACK ERROR: Missing OAuth code.")
+
+        print(
+            "GOOGLE CALLBACK ERROR: "
+            "Missing OAuth code."
+        )
+
         return None
 
     try:
@@ -290,12 +303,23 @@ def handle_google_callback(oauth_code):
         supabase = get_supabase()
 
         # ----------------------------------------------------
-        # EXCHANGE AUTHORIZATION CODE
+        # EXCHANGE AUTHORIZATION CODE FOR SESSION
         # ----------------------------------------------------
 
         response = supabase.auth.exchange_code_for_session(
-            oauth_code
+            {
+                "auth_code": oauth_code
+            }
         )
+
+        if not response:
+
+            print(
+                "GOOGLE CALLBACK ERROR: "
+                "No response from Supabase."
+            )
+
+            return None
 
         # ----------------------------------------------------
         # GET USER FROM RESPONSE
@@ -303,26 +327,30 @@ def handle_google_callback(oauth_code):
 
         user = None
 
-        if response:
+        if hasattr(response, "user"):
 
-            if hasattr(response, "user"):
-                user = response.user
-
-            if user is None and hasattr(
-                response,
-                "session"
-            ):
-
-                session = response.session
-
-                if session and hasattr(
-                    session,
-                    "user"
-                ):
-                    user = session.user
+            user = response.user
 
         # ----------------------------------------------------
-        # FALLBACK TO CURRENT SESSION
+        # FALLBACK TO SESSION USER
+        # ----------------------------------------------------
+
+        if user is None and hasattr(
+            response,
+            "session"
+        ):
+
+            session = response.session
+
+            if session and hasattr(
+                session,
+                "user"
+            ):
+
+                user = session.user
+
+        # ----------------------------------------------------
+        # FALLBACK TO CURRENT USER
         # ----------------------------------------------------
 
         if user is None:
@@ -330,6 +358,7 @@ def handle_google_callback(oauth_code):
             current_user = get_current_user()
 
             if current_user:
+
                 return current_user
 
             print(
@@ -340,7 +369,7 @@ def handle_google_callback(oauth_code):
             return None
 
         # ----------------------------------------------------
-        # USER NAME
+        # GET USER NAME
         # ----------------------------------------------------
 
         full_name = None
@@ -405,9 +434,11 @@ def get_current_user():
         response = supabase.auth.get_user()
 
         if not response:
+
             return None
 
         if not response.user:
+
             return None
 
         user = response.user
@@ -460,9 +491,11 @@ def get_user(user_id):
         user = get_current_user()
 
         if not user:
+
             return None
 
         if str(user["id"]) != str(user_id):
+
             return None
 
         return (

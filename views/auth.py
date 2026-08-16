@@ -4,8 +4,8 @@ from database.users import (
     create_user,
     authenticate_user,
     get_google_login_url,
+    handle_google_callback,
 )
-
 
 # ============================================================
 # REGISTER
@@ -324,8 +324,53 @@ def render_login():
 # AUTH ROUTER
 # ============================================================
 
+def handle_google_oauth_callback():
+
+    code = st.query_params.get("code")
+
+    if not code:
+        return
+
+    user = handle_google_callback(code)
+
+    if not user:
+
+        st.error(
+            "Google authentication failed."
+        )
+
+        st.error(
+            "The authorization code could not be "
+            "exchanged for a Supabase session."
+        )
+
+        return
+
+    st.session_state.logged_in = True
+    st.session_state.user_id = user["id"]
+    st.session_state.user_name = user["full_name"]
+    st.session_state.user_email = user["email"]
+    st.session_state.auth_page = "login"
+
+    st.query_params.clear()
+
+    st.rerun()
+
+
+# ============================================================
+# AUTH ROUTER
+# ============================================================
+
 def render_auth():
 
+    # Check if Google sent us back an authorization code
+    if "code" in st.query_params:
+
+        handle_google_oauth_callback()
+
+        return
+
+    # Normal login/register page
     if "auth_page" not in st.session_state:
 
         st.session_state.auth_page = "login"
