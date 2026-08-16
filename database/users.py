@@ -1,5 +1,6 @@
 import streamlit as st
 from supabase import create_client
+from supabase.client import ClientOptions
 
 
 # ============================================================
@@ -11,22 +12,62 @@ SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 
 
 # ============================================================
+# STREAMLIT SESSION STORAGE
+# ============================================================
+
+class StreamlitStorage:
+    """
+    Storage adapter for Supabase Auth.
+
+    Supabase uses this storage for PKCE information such as
+    the code verifier and for authentication session data.
+
+    Streamlit session_state keeps this data isolated per user
+    session instead of sharing it globally.
+    """
+
+    def get_item(self, key):
+        return st.session_state.get(
+            f"supabase_storage_{key}"
+        )
+
+    def set_item(self, key, value):
+        st.session_state[
+            f"supabase_storage_{key}"
+        ] = value
+
+    def remove_item(self, key):
+        st.session_state.pop(
+            f"supabase_storage_{key}",
+            None
+        )
+
+
+# ============================================================
 # SUPABASE CLIENT
 # ============================================================
 
 def get_supabase():
     """
-    Create one Supabase client per Streamlit user session.
+    Create one Supabase client per Streamlit session.
 
-    The client must NOT be globally cached because it contains
-    authentication state and PKCE information.
+    The client is NOT globally cached because authentication
+    state must never be shared between users.
     """
 
     if "supabase_client" not in st.session_state:
 
+        storage = StreamlitStorage()
+
+        options = ClientOptions(
+            flow_type="pkce",
+            storage=storage,
+        )
+
         st.session_state.supabase_client = create_client(
             SUPABASE_URL,
-            SUPABASE_KEY
+            SUPABASE_KEY,
+            options=options
         )
 
     return st.session_state.supabase_client
@@ -43,20 +84,11 @@ def create_user(
 ):
     """
     Create a new StyleSense user using Supabase Auth.
-
-    Returns:
-        (True, result)
-        or
-        (False, error_message)
     """
 
     full_name = (full_name or "").strip()
     email = (email or "").strip().lower()
     password = password or ""
-
-    # --------------------------------------------------------
-    # VALIDATION
-    # --------------------------------------------------------
 
     if not full_name:
         return False, "Please enter your full name."
@@ -89,10 +121,6 @@ def create_user(
         if not response.user:
             return False, "Unable to create account."
 
-        # ----------------------------------------------------
-        # EMAIL CONFIRMATION
-        # ----------------------------------------------------
-
         if response.session is None:
 
             return (
@@ -101,10 +129,6 @@ def create_user(
                 "Please check your email and verify your account "
                 "before logging in."
             )
-
-        # ----------------------------------------------------
-        # SESSION CREATED
-        # ----------------------------------------------------
 
         return True, response.user
 
@@ -135,15 +159,6 @@ def authenticate_user(
 ):
     """
     Authenticate a user using Supabase email/password.
-
-    Returns:
-        (
-            user_id,
-            full_name,
-            email
-        )
-
-    or None if authentication fails.
     """
 
     email = (email or "").strip().lower()
@@ -210,19 +225,26 @@ def authenticate_user(
 
 def get_google_redirect_url():
     """
-    Get the deployed Streamlit redirect URL
-    from Streamlit Cloud secrets.
+    Get the deployed Streamlit redirect URL.
     """
 
     redirect_url = st.secrets.get(
         "GOOGLE_REDIRECT_URL"
     )
 
+    # Fall back to APP_URL if GOOGLE_REDIRECT_URL
+    # has not been added separately.
+    if not redirect_url:
+
+        redirect_url = st.secrets.get(
+            "APP_URL"
+        )
+
     if not redirect_url:
 
         raise RuntimeError(
-            "GOOGLE_REDIRECT_URL is missing from "
-            "Streamlit secrets."
+            "GOOGLE_REDIRECT_URL or APP_URL is missing "
+            "from Streamlit secrets."
         )
 
     return redirect_url.rstrip("/")
@@ -235,6 +257,9 @@ def get_google_redirect_url():
 def get_google_login_url():
     """
     Generate the Google OAuth login URL.
+
+    The same Streamlit session storage is used by Supabase
+    to preserve the PKCE verifier.
     """
 
     try:
@@ -283,16 +308,7 @@ def get_google_login_url():
 def handle_google_callback(oauth_code):
     """
     Exchange the Google/Supabase OAuth authorization code
-    for a Supabase session and return the authenticated user.
-
-    Returns:
-        {
-            "id": user_id,
-            "full_name": full_name,
-            "email": email
-        }
-
-        or None if authentication fails.
+    for a Supabase session.
     """
 
     if not oauth_code:
@@ -309,7 +325,7 @@ def handle_google_callback(oauth_code):
         supabase = get_supabase()
 
         # ----------------------------------------------------
-        # EXCHANGE AUTHORIZATION CODE FOR SESSION
+        # EXCHANGE AUTHORIZATION CODE
         # ----------------------------------------------------
 
         response = supabase.auth.exchange_code_for_session(
@@ -328,7 +344,7 @@ def handle_google_callback(oauth_code):
             return None
 
         # ----------------------------------------------------
-        # GET USER FROM RESPONSE
+        # GET USER
         # ----------------------------------------------------
 
         user = None
@@ -336,10 +352,6 @@ def handle_google_callback(oauth_code):
         if hasattr(response, "user"):
 
             user = response.user
-
-        # ----------------------------------------------------
-        # FALLBACK TO SESSION USER
-        # ----------------------------------------------------
 
         if user is None and hasattr(
             response,
@@ -356,7 +368,7 @@ def handle_google_callback(oauth_code):
                 user = session.user
 
         # ----------------------------------------------------
-        # FALLBACK TO CURRENT USER
+        # FALLBACK
         # ----------------------------------------------------
 
         if user is None:
@@ -375,7 +387,7 @@ def handle_google_callback(oauth_code):
             return None
 
         # ----------------------------------------------------
-        # GET USER NAME
+        # USER NAME
         # ----------------------------------------------------
 
         full_name = None
@@ -395,10 +407,6 @@ def handle_google_callback(oauth_code):
                 else "User"
             )
 
-        # ----------------------------------------------------
-        # RETURN USER
-        # ----------------------------------------------------
-
         return {
             "id": user.id,
             "full_name": full_name,
@@ -417,10 +425,6 @@ def handle_google_callback(oauth_code):
             repr(e)
         )
 
-        st.error(
-            f"Google callback error: {type(e).__name__}: {e}"
-        )
-
         return None
 
 
@@ -431,15 +435,6 @@ def handle_google_callback(oauth_code):
 def get_current_user():
     """
     Return the currently authenticated Supabase user.
-
-    Returns:
-        {
-            "id": user_id,
-            "full_name": full_name,
-            "email": email
-        }
-
-        or None.
     """
 
     try:
@@ -449,11 +444,9 @@ def get_current_user():
         response = supabase.auth.get_user()
 
         if not response:
-
             return None
 
         if not response.user:
-
             return None
 
         user = response.user
@@ -506,11 +499,9 @@ def get_user(user_id):
         user = get_current_user()
 
         if not user:
-
             return None
 
         if str(user["id"]) != str(user_id):
-
             return None
 
         return (
@@ -543,6 +534,22 @@ def logout_user():
         supabase = get_supabase()
 
         supabase.auth.sign_out()
+
+        # Clear the Streamlit-side Supabase client/storage
+        # so a future login starts with a clean session.
+
+        st.session_state.pop(
+            "supabase_client",
+            None
+        )
+
+        for key in list(st.session_state.keys()):
+
+            if key.startswith(
+                "supabase_storage_"
+            ):
+
+                del st.session_state[key]
 
         return True
 
