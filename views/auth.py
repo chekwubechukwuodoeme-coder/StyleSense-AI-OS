@@ -3,6 +3,7 @@ import streamlit as st
 from database.users import (
     create_user,
     authenticate_user,
+    sign_in_with_google,
 )
 
 
@@ -151,6 +152,34 @@ def render_login():
         else:
 
             st.error(f"❌ {result}")
+
+    st.divider()
+
+    if st.button(
+        "🔵 Continue with Google",
+        use_container_width=True
+    ):
+
+        google_url = sign_in_with_google()
+
+        if google_url:
+
+            if google_url.startswith("ERROR:"):
+
+                st.error(google_url)
+
+            else:
+
+                st.markdown(
+                    f"""
+                    <meta http-equiv="refresh" content="0; url={google_url}">
+                    """,
+                    unsafe_allow_html=True
+                )
+
+        else:
+
+            st.error("Unable to start Google login.")
 
     st.divider()
 

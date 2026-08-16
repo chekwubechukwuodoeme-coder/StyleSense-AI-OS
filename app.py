@@ -139,7 +139,6 @@ if "current_project" not in st.session_state:
 if "open_workspace" not in st.session_state:
     st.session_state.open_workspace = False
 
-
 # ==========================
 # SIDEBAR
 # ==========================
@@ -182,6 +181,30 @@ with st.sidebar:
 
 if not st.session_state.logged_in:
 
+    # Check if Supabase already has an authenticated user
+    google_user = None
+
+    try:
+        from database.users import get_current_user
+
+        google_user = get_current_user()
+
+    except Exception as e:
+
+        print("AUTH CHECK ERROR:", e)
+
+    # If Google/Supabase authentication succeeded,
+    # create the Streamlit session
+    if google_user:
+
+        st.session_state.logged_in = True
+        st.session_state.user_id = google_user["id"]
+        st.session_state.user_name = google_user["full_name"]
+        st.session_state.user_email = google_user["email"]
+
+        st.rerun()
+
+    # Otherwise show the normal login/register page
     render_auth()
 
     st.stop()

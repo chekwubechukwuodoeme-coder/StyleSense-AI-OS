@@ -10,10 +10,17 @@ SUPABASE_URL = st.secrets["SUPABASE_URL"]
 SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 
 
+# ============================================================
+# SUPABASE CLIENT
+# ============================================================
+
 @st.cache_resource
 def get_supabase():
-    """Create and cache the Supabase client."""
-    return create_client(SUPABASE_URL, SUPABASE_KEY)
+
+    return create_client(
+        SUPABASE_URL,
+        SUPABASE_KEY
+    )
 
 
 # ============================================================
@@ -21,13 +28,11 @@ def get_supabase():
 # ============================================================
 
 def create_user(full_name, email, password):
-    """Register a new user with Supabase Auth."""
 
     full_name = full_name.strip()
     email = email.strip().lower()
     password = password.strip()
 
-    # Validation
     if not full_name:
         return False, "Please enter your full name."
 
@@ -41,6 +46,7 @@ def create_user(full_name, email, password):
         return False, "Password must be at least 6 characters."
 
     try:
+
         supabase = get_supabase()
 
         response = supabase.auth.sign_up({
@@ -56,8 +62,8 @@ def create_user(full_name, email, password):
         if response.user is None:
             return False, "Unable to create account."
 
-        # Email confirmation is enabled
         if response.session is None:
+
             return (
                 True,
                 "Account created! Please check your email and "
@@ -67,9 +73,13 @@ def create_user(full_name, email, password):
         return True, response.user
 
     except Exception as e:
+
         error = str(e).lower()
 
-        if "already registered" in error or "user already registered" in error:
+        if (
+            "already registered" in error
+            or "user already registered" in error
+        ):
             return False, "An account with this email already exists."
 
         return False, str(e)
@@ -80,13 +90,6 @@ def create_user(full_name, email, password):
 # ============================================================
 
 def authenticate_user(email, password):
-    """
-    Authenticate a user with Supabase Auth.
-
-    Returns:
-        (True, user_data) on success
-        (False, error_message) on failure
-    """
 
     email = email.strip().lower()
 
@@ -97,6 +100,7 @@ def authenticate_user(email, password):
         return False, "Please enter your password."
 
     try:
+
         supabase = get_supabase()
 
         response = supabase.auth.sign_in_with_password({
@@ -134,6 +138,7 @@ def authenticate_user(email, password):
         error_lower = error.lower()
 
         if "email not confirmed" in error_lower:
+
             return False, (
                 "Your email has not been confirmed. "
                 "Please check your email and click the confirmation link."
@@ -153,16 +158,18 @@ def authenticate_user(email, password):
 # ============================================================
 
 def get_current_user():
-    """Return information about the currently authenticated user."""
 
     try:
+
         supabase = get_supabase()
+
         response = supabase.auth.get_user()
 
         if not response or not response.user:
             return None
 
         user = response.user
+
         user_email = user.email
 
         full_name = (
@@ -172,6 +179,7 @@ def get_current_user():
         )
 
         if not full_name:
+
             full_name = (
                 user_email.split("@")[0]
                 if user_email
@@ -185,7 +193,9 @@ def get_current_user():
         }
 
     except Exception as e:
+
         print("GET CURRENT USER ERROR:", e)
+
         return None
 
 
@@ -194,12 +204,9 @@ def get_current_user():
 # ============================================================
 
 def get_user(user_id):
-    """
-    Return the currently authenticated user's information
-    only if the supplied ID belongs to that user.
-    """
 
     try:
+
         user = get_current_user()
 
         if not user:
@@ -215,21 +222,22 @@ def get_user(user_id):
         )
 
     except Exception as e:
-        print("GET USER ERROR:", e)
-        return None
 
+        print("GET USER ERROR:", e)
+
+        return None
 
 # ============================================================
 # GOOGLE LOGIN
 # ============================================================
 
 def sign_in_with_google():
-    """Return the Google OAuth URL."""
 
     try:
+
         supabase = get_supabase()
 
-        redirect_url = "https://stylesenseai-os.streamlit.app/"
+        redirect_url = "https://stylesenseai-os.streamlit.app"
 
         response = supabase.auth.sign_in_with_oauth({
             "provider": "google",
@@ -238,25 +246,32 @@ def sign_in_with_google():
             }
         })
 
+        print("GOOGLE OAUTH RESPONSE:", response)
+
         return response.url
 
     except Exception as e:
-        print("GOOGLE LOGIN ERROR:", e)
-        return None
 
+        print("GOOGLE LOGIN ERROR:", repr(e))
+
+        return f"ERROR: {repr(e)}"
 
 # ============================================================
 # LOGOUT
 # ============================================================
 
 def logout_user():
-    """Sign out the currently authenticated user."""
 
     try:
+
         supabase = get_supabase()
+
         supabase.auth.sign_out()
+
         return True
 
     except Exception as e:
+
         print("LOGOUT ERROR:", e)
+
         return False
