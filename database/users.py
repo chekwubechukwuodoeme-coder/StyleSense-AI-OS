@@ -402,8 +402,17 @@ def handle_google_callback(oauth_code):
     except Exception as e:
 
         print(
+            "GOOGLE CALLBACK ERROR TYPE:",
+            type(e).__name__
+        )
+
+        print(
             "GOOGLE CALLBACK ERROR:",
             repr(e)
+        )
+
+        st.error(
+            f"Google callback error: {type(e).__name__}: {e}"
         )
 
         return None
