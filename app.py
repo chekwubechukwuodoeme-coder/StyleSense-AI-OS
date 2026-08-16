@@ -40,7 +40,7 @@ from views.projects import render_projects
 st.set_page_config(
     page_title="StyleSense AI OS",
     page_icon="👗",
-    layout="wide"
+    layout="wide",
 )
 
 
@@ -49,34 +49,6 @@ st.set_page_config(
 # ============================================================
 
 init_database()
-
-
-# ============================================================
-# PAGES
-# ============================================================
-
-PAGES = {
-    "🏠 Dashboard": render_dashboard,
-    "📂 Projects": render_projects,
-    "🤖 AI Team": render_ai_team,
-    "✨ AI Design Studio": render_design_studio,
-    "💡 Fashion Inspiration": render_fashion_inspiration,
-    "✏ AI Design Editor": render_design_editor,
-    "🚀 AI Fashion Co-Founder": render_fashion_cofounder,
-    "🎨 Logo Generator": render_logo_generator,
-    "📸 Outfit Analyzer": render_outfit_analyzer,
-    "🤖 Fashion Assistant": render_fashion_assistant,
-    "🧵 Fabric Advisor": render_fabric_advisor,
-    "📚 Design Library": render_design_library,
-    "🎨 Color Matcher": render_color_matcher,
-    "📰 Fashion News": render_fashion_news,
-    "📰 Fashion Magazine": render_fashion_magazine,
-    "🔥 AI Fashion Trends": render_fashion_trends,
-    "🛍️ Fashion Marketplace": render_marketplace,
-    "👗 Fashion Professionals": render_profiles,
-    "👔 AI Virtual Stylist": render_virtual_stylist,
-    "⚙ Settings": render_settings,
-}
 
 
 # ============================================================
@@ -117,7 +89,7 @@ def load_css():
 
             st.markdown(
                 f"<style>{f.read()}</style>",
-                unsafe_allow_html=True
+                unsafe_allow_html=True,
             )
 
     except Exception as e:
@@ -176,13 +148,20 @@ for key, value in DEFAULT_SESSION_STATE.items():
 # GOOGLE OAUTH CALLBACK
 # ============================================================
 
-# IMPORTANT:
-# There is ONE Google callback handler in the application.
-#
-# Do not also handle the callback inside views/auth.py.
+def process_google_callback():
 
+    """
+    Process the OAuth callback before rendering the login page.
 
-if not st.session_state.logged_in:
+    Expected callback:
+
+        https://stylesenseai-os.streamlit.app/?code=...
+
+    """
+
+    # --------------------------------------------------------
+    # GET QUERY PARAMETERS
+    # --------------------------------------------------------
 
     oauth_error = st.query_params.get(
         "error"
@@ -197,35 +176,52 @@ if not st.session_state.logged_in:
     )
 
     # --------------------------------------------------------
-    # OAUTH ERROR
+    # NO OAUTH CALLBACK
     # --------------------------------------------------------
+
+    if not oauth_error and not oauth_code:
+
+        return False
+
+
+    # ========================================================
+    # OAUTH ERROR
+    # ========================================================
 
     if oauth_error:
 
         st.error(
-            f"Google authentication failed: "
-            f"{oauth_error}"
+            "Google authentication failed."
+        )
+
+        st.warning(
+            f"OAuth error: {oauth_error}"
         )
 
         if oauth_error_description:
 
-            st.warning(
+            st.info(
                 oauth_error_description
             )
 
         st.query_params.clear()
 
-        st.stop()
+        return True
 
-    # --------------------------------------------------------
+
+    # ========================================================
     # OAUTH CODE
-    # --------------------------------------------------------
+    # ========================================================
 
     if oauth_code:
 
         google_user = handle_google_callback(
             oauth_code
         )
+
+        # ----------------------------------------------------
+        # SUCCESS
+        # ----------------------------------------------------
 
         if google_user:
 
@@ -245,28 +241,51 @@ if not st.session_state.logged_in:
 
             st.session_state.auth_page = "login"
 
+            # Remove the one-time authorization code
             st.query_params.clear()
 
+            # Go to the application
             st.rerun()
 
-        else:
+            return True
 
-            st.error(
-                "Google authentication failed."
-            )
+        # ----------------------------------------------------
+        # FAILURE
+        # ----------------------------------------------------
 
-            st.warning(
-                "The authorization code could not "
-                "be exchanged for a Supabase session."
-            )
+        st.error(
+            "Google authentication failed."
+        )
 
-            st.info(
-                "Please start Google sign-in again."
-            )
+        st.warning(
+            "The authorization code could not "
+            "be exchanged for a Supabase session."
+        )
 
-            st.query_params.clear()
+        st.info(
+            "Please start Google sign-in again."
+        )
 
-            st.stop()
+        st.query_params.clear()
+
+        return True
+
+    return False
+
+
+# ============================================================
+# PROCESS GOOGLE CALLBACK FIRST
+# ============================================================
+
+if not st.session_state.logged_in:
+
+    callback_was_processed = (
+        process_google_callback()
+    )
+
+    if callback_was_processed:
+
+        st.stop()
 
 
 # ============================================================
@@ -300,6 +319,68 @@ if not st.session_state.logged_in:
         render_auth()
 
         st.stop()
+
+
+# ============================================================
+# PAGES
+# ============================================================
+
+PAGES = {
+
+    "🏠 Dashboard": render_dashboard,
+
+    "📂 Projects": render_projects,
+
+    "🤖 AI Team": render_ai_team,
+
+    "✨ AI Design Studio": render_design_studio,
+
+    "💡 Fashion Inspiration": render_fashion_inspiration,
+
+    "✏ AI Design Editor": render_design_editor,
+
+    "🚀 AI Fashion Co-Founder":
+        render_fashion_cofounder,
+
+    "🎨 Logo Generator":
+        render_logo_generator,
+
+    "📸 Outfit Analyzer":
+        render_outfit_analyzer,
+
+    "🤖 Fashion Assistant":
+        render_fashion_assistant,
+
+    "🧵 Fabric Advisor":
+        render_fabric_advisor,
+
+    "📚 Design Library":
+        render_design_library,
+
+    "🎨 Color Matcher":
+        render_color_matcher,
+
+    "📰 Fashion News":
+        render_fashion_news,
+
+    "📰 Fashion Magazine":
+        render_fashion_magazine,
+
+    "🔥 AI Fashion Trends":
+        render_fashion_trends,
+
+    "🛍️ Fashion Marketplace":
+        render_marketplace,
+
+    "👗 Fashion Professionals":
+        render_profiles,
+
+    "👔 AI Virtual Stylist":
+        render_virtual_stylist,
+
+    "⚙ Settings":
+        render_settings,
+}
 
 
 # ============================================================

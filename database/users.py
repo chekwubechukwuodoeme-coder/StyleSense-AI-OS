@@ -1,4 +1,5 @@
 import streamlit as st
+
 from supabase import create_client
 from supabase.client import ClientOptions
 
@@ -17,10 +18,16 @@ SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 
 class StreamlitStorage:
     """
-    Per-user/session storage for Supabase Auth.
+    Storage adapter used by Supabase Auth.
 
-    This stores the PKCE verifier and Supabase session
-    inside the current Streamlit session.
+    Supabase uses this storage to keep:
+        - PKCE code verifier
+        - authentication session
+        - refresh token
+
+    Streamlit session_state is scoped to the current browser
+    session, which prevents different users from sharing auth
+    state.
     """
 
     def get_item(self, key):
@@ -46,11 +53,12 @@ class StreamlitStorage:
 
 def get_supabase():
     """
-    Create one Supabase client for the current Streamlit
+    Return the Supabase client for the current Streamlit
     browser session.
 
-    DO NOT use st.cache_resource here because authentication
-    state must never be shared between users.
+    IMPORTANT:
+    Do not use st.cache_resource here because authentication
+    state must not be shared between different users.
     """
 
     if "supabase_client" not in st.session_state:
@@ -60,12 +68,14 @@ def get_supabase():
         options = ClientOptions(
             flow_type="pkce",
             storage=storage,
+            auto_refresh_token=True,
+            persist_session=True,
         )
 
         st.session_state.supabase_client = create_client(
             SUPABASE_URL,
             SUPABASE_KEY,
-            options=options
+            options=options,
         )
 
     return st.session_state.supabase_client
@@ -112,6 +122,10 @@ def create_user(full_name, email, password):
         if not response.user:
             return False, "Unable to create account."
 
+        # ----------------------------------------------------
+        # EMAIL CONFIRMATION REQUIRED
+        # ----------------------------------------------------
+
         if response.session is None:
 
             return (
@@ -120,6 +134,10 @@ def create_user(full_name, email, password):
                 "Please check your email and verify your account "
                 "before logging in."
             )
+
+        # ----------------------------------------------------
+        # SESSION CREATED IMMEDIATELY
+        # ----------------------------------------------------
 
         return True, response.user
 
@@ -131,11 +149,18 @@ def create_user(full_name, email, password):
         if (
             "already registered" in lower
             or "user already registered" in lower
+            or "already exists" in lower
         ):
+
             return (
                 False,
                 "An account with this email already exists."
             )
+
+        print(
+            "CREATE USER ERROR:",
+            repr(e)
+        )
 
         return False, error
 
@@ -226,6 +251,7 @@ def get_google_redirect_url():
             "from Streamlit secrets."
         )
 
+    # Remove trailing slash so the redirect URI is consistent
     return redirect_url.rstrip("/")
 
 
@@ -235,11 +261,38 @@ def get_google_redirect_url():
 
 def get_google_login_url():
 
+    """
+    Generate the Google OAuth URL.
+
+    IMPORTANT:
+    The URL is generated only once per Streamlit session.
+
+    This prevents a Streamlit rerun from generating a new
+    PKCE verifier and invalidating the verifier associated
+    with the Google authorization request.
+    """
+
+    # --------------------------------------------------------
+    # REUSE EXISTING OAUTH URL
+    # --------------------------------------------------------
+
+    existing_url = st.session_state.get(
+        "google_oauth_url"
+    )
+
+    if existing_url:
+
+        return existing_url
+
     try:
 
         supabase = get_supabase()
 
         redirect_url = get_google_redirect_url()
+
+        # ----------------------------------------------------
+        # START GOOGLE OAUTH
+        # ----------------------------------------------------
 
         response = supabase.auth.sign_in_with_oauth(
             {
@@ -251,21 +304,36 @@ def get_google_login_url():
         )
 
         if not response:
+
             raise RuntimeError(
                 "Supabase did not return an OAuth response."
             )
 
-        if not response.url:
+        google_url = getattr(
+            response,
+            "url",
+            None
+        )
+
+        if not google_url:
+
             raise RuntimeError(
                 "Supabase did not return a Google OAuth URL."
             )
 
-        return response.url
+        # ----------------------------------------------------
+        # SAVE OAUTH URL
+        # ----------------------------------------------------
+
+        st.session_state.google_oauth_url = google_url
+
+        return google_url
 
     except Exception as e:
 
         print(
-            "GOOGLE LOGIN ERROR:",
+            "GOOGLE LOGIN URL ERROR:",
+            type(e).__name__,
             repr(e)
         )
 
@@ -273,10 +341,47 @@ def get_google_login_url():
 
 
 # ============================================================
+# CLEAR GOOGLE OAUTH STATE
+# ============================================================
+
+def clear_google_oauth_state():
+
+    """
+    Remove OAuth-specific temporary state.
+
+    This should be called after the OAuth flow finishes.
+    """
+
+    st.session_state.pop(
+        "google_oauth_url",
+        None
+    )
+
+    # Remove the PKCE verifier after the exchange has finished.
+    #
+    # Supabase normally removes it itself after a successful
+    # exchange, but this also cleans it after an unsuccessful
+    # attempt.
+    st.session_state.pop(
+        "_supabase_code-verifier",
+        None
+    )
+
+
+# ============================================================
 # GOOGLE CALLBACK
 # ============================================================
 
 def handle_google_callback(oauth_code):
+
+    """
+    Exchange the Google/Supabase authorization code for a
+    Supabase session.
+
+    The authorization code is single-use and short-lived.
+    Therefore this function must only be called once for
+    each callback URL.
+    """
 
     if not oauth_code:
 
@@ -286,12 +391,37 @@ def handle_google_callback(oauth_code):
 
         return None
 
+    # --------------------------------------------------------
+    # CHECK PKCE VERIFIER
+    # --------------------------------------------------------
+
+    verifier_key = "_supabase_code-verifier"
+
+    code_verifier = st.session_state.get(
+        verifier_key
+    )
+
+    if not code_verifier:
+
+        print(
+            "GOOGLE CALLBACK ERROR: "
+            "PKCE code verifier is missing."
+        )
+
+        return None
+
     try:
 
         supabase = get_supabase()
 
         print(
-            "GOOGLE CALLBACK: attempting code exchange..."
+            "GOOGLE CALLBACK: "
+            "PKCE verifier found."
+        )
+
+        print(
+            "GOOGLE CALLBACK: "
+            "Exchanging authorization code..."
         )
 
         response = supabase.auth.exchange_code_for_session(
@@ -304,41 +434,43 @@ def handle_google_callback(oauth_code):
 
             print(
                 "GOOGLE CALLBACK ERROR: "
-                "No response from Supabase."
+                "Supabase returned no response."
             )
 
             return None
 
-        user = None
-
         # ----------------------------------------------------
-        # RESPONSE USER
+        # GET USER FROM RESPONSE
         # ----------------------------------------------------
 
-        if hasattr(response, "user"):
-
-            user = response.user
-
-        # ----------------------------------------------------
-        # SESSION USER
-        # ----------------------------------------------------
-
-        if user is None and hasattr(
+        user = getattr(
             response,
-            "session"
-        ):
-
-            session = response.session
-
-            if session and hasattr(
-                session,
-                "user"
-            ):
-
-                user = session.user
+            "user",
+            None
+        )
 
         # ----------------------------------------------------
-        # FALLBACK
+        # FALLBACK TO SESSION USER
+        # ----------------------------------------------------
+
+        if user is None:
+
+            session = getattr(
+                response,
+                "session",
+                None
+            )
+
+            if session:
+
+                user = getattr(
+                    session,
+                    "user",
+                    None
+                )
+
+        # ----------------------------------------------------
+        # FINAL FALLBACK
         # ----------------------------------------------------
 
         if user is None:
@@ -346,6 +478,7 @@ def handle_google_callback(oauth_code):
             current_user = get_current_user()
 
             if current_user:
+
                 return current_user
 
             print(
@@ -356,30 +489,57 @@ def handle_google_callback(oauth_code):
             return None
 
         # ----------------------------------------------------
+        # USER EMAIL
+        # ----------------------------------------------------
+
+        user_email = getattr(
+            user,
+            "email",
+            None
+        )
+
+        # ----------------------------------------------------
         # USER NAME
         # ----------------------------------------------------
 
         full_name = None
 
-        if user.user_metadata:
+        user_metadata = getattr(
+            user,
+            "user_metadata",
+            None
+        )
+
+        if user_metadata:
 
             full_name = (
-                user.user_metadata.get("full_name")
-                or user.user_metadata.get("name")
+                user_metadata.get("full_name")
+                or user_metadata.get("name")
             )
 
         if not full_name:
 
             full_name = (
-                user.email.split("@")[0]
-                if user.email
+                user_email.split("@")[0]
+                if user_email
                 else "User"
             )
+
+        # ----------------------------------------------------
+        # SAVE APPLICATION AUTH STATE
+        # ----------------------------------------------------
+
+        st.session_state.google_oauth_url = None
+
+        print(
+            "GOOGLE CALLBACK: "
+            "Authentication successful."
+        )
 
         return {
             "id": user.id,
             "full_name": full_name,
-            "email": user.email
+            "email": user_email,
         }
 
     except Exception as e:
@@ -412,32 +572,48 @@ def get_current_user():
         if not response:
             return None
 
-        if not response.user:
+        user = getattr(
+            response,
+            "user",
+            None
+        )
+
+        if not user:
             return None
 
-        user = response.user
+        user_email = getattr(
+            user,
+            "email",
+            None
+        )
+
+        user_metadata = getattr(
+            user,
+            "user_metadata",
+            None
+        )
 
         full_name = None
 
-        if user.user_metadata:
+        if user_metadata:
 
             full_name = (
-                user.user_metadata.get("full_name")
-                or user.user_metadata.get("name")
+                user_metadata.get("full_name")
+                or user_metadata.get("name")
             )
 
         if not full_name:
 
             full_name = (
-                user.email.split("@")[0]
-                if user.email
+                user_email.split("@")[0]
+                if user_email
                 else "User"
             )
 
         return {
             "id": user.id,
             "full_name": full_name,
-            "email": user.email
+            "email": user_email,
         }
 
     except Exception as e:
@@ -464,6 +640,7 @@ def get_user(user_id):
             return None
 
         if str(user["id"]) != str(user_id):
+
             return None
 
         return (
@@ -494,13 +671,19 @@ def logout_user():
 
         supabase.auth.sign_out()
 
-        # Clear Supabase client
+        # ----------------------------------------------------
+        # CLEAR SUPABASE CLIENT
+        # ----------------------------------------------------
+
         st.session_state.pop(
             "supabase_client",
             None
         )
 
-        # Clear Supabase storage
+        # ----------------------------------------------------
+        # CLEAR SUPABASE STORAGE
+        # ----------------------------------------------------
+
         for key in list(
             st.session_state.keys()
         ):
@@ -511,11 +694,28 @@ def logout_user():
 
                 del st.session_state[key]
 
-        # Clear application login state
+        # ----------------------------------------------------
+        # CLEAR GOOGLE OAUTH STATE
+        # ----------------------------------------------------
+
+        st.session_state.pop(
+            "google_oauth_url",
+            None
+        )
+
+        # ----------------------------------------------------
+        # CLEAR APPLICATION AUTH STATE
+        # ----------------------------------------------------
+
         st.session_state.logged_in = False
+
         st.session_state.user_id = None
+
         st.session_state.user_name = None
+
         st.session_state.user_email = None
+
+        st.session_state.auth_page = "login"
 
         return True
 
