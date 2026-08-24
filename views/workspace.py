@@ -24,7 +24,7 @@ def render_workspace():
             key="workspace_no_project_back"
         ):
 
-            st.session_state.current_page = "📂 Projects"
+            st.session_state.main_navigation = "Projects"
 
             st.rerun()
 
@@ -42,6 +42,9 @@ def render_workspace():
         st.session_state.current_project = None
 
         st.session_state.open_workspace = False
+
+        st.session_state.main_navigation = "Projects"
+
 
         st.rerun()
 

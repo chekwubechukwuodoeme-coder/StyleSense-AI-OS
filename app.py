@@ -1377,11 +1377,11 @@ elif current_page == "Notifications":
 
 elif current_page == "Workspace":
 
-    if (
-        st.session_state.get(
-            "current_project"
-        ) is None
-    ):
+    current_project = st.session_state.get(
+        "current_project"
+    )
+
+    if current_project is None:
 
         st.warning(
             "Open a project first."
@@ -1395,7 +1395,6 @@ elif current_page == "Workspace":
     else:
 
         render_workspace()
-
 
 # ============================================================
 # NORMAL PAGE ROUTING

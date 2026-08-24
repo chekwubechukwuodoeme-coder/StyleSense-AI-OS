@@ -15,7 +15,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 AVATAR_PATH = PROJECT_ROOT / "assets" / "fashion_avatar.png"
 
 from database.database import get_all_designs
-
+from database.projects import get_projects
 
 # ============================================================
 # HELPERS
@@ -268,9 +268,16 @@ def render_dashboard():
     # LOAD DATABASE DATA
     # ========================================================
 
+    user_id = st.session_state.get("user_id")
+
     try:
-        projects = count_projects()
+        
+        all_projects = get_projects(
+            user_id=user_id
+        ) or []
+        projects = len(all_projects)
     except Exception:
+        all_projects = []
         projects = 0
 
     try:
@@ -717,72 +724,114 @@ def render_dashboard():
         "Continue working on your latest fashion projects"
     )
 
-    # Temporary until get_recent_projects() is added
-    recent_projects = [
-        (
-            "Summer Collection",
-            "Contemporary summer fashion collection",
-            "Collection",
-        ),
-        (
-            "African Luxury",
-            "Modern luxury inspired by African culture",
-            "Luxury",
-        ),
-        (
-            "Urban Essentials",
-            "Modern everyday fashion concepts",
-            "Streetwear",
-        ),
-    ]
+    try:
+       recent_projects = all_projects
+    except Exception as e:
+        recent_projects = []
+        st.error(f"Unable to load projects: {e}")
 
-    columns = st.columns(3)
 
-    for i, (
-        title,
-        description,
-        category,
-    ) in enumerate(recent_projects[:3]):
+    if not recent_projects:
 
-        with columns[i]:
+        st.info(
+            "📁 You don't have any projects yet. "
+            "Create your first fashion project from Projects."
+        )
 
-            st.markdown(
-                "### 📁"
-            )
+    else:
 
-            st.write(
-                f"**{title}**"
-            )
+        # Show the 3 most recent real projects
+        recent_projects = recent_projects[:3]
 
-            st.caption(
-                description
-            )
+        columns = st.columns(len(recent_projects))
 
-            st.caption(
-                f"Category: {category}"
-            )
+        for i, project in enumerate(recent_projects):
+
+            project_id = project[0]
+            project_user_id = project[1]
+            project_title = project[2]
+            project_description = project[3]
+            project_category = project[4]
+            project_cover = project[5]
+            project_created = project[6]
+
+            with columns[i]:
+
+                # Project card
+                with st.container(border=True):
+
+                    if project_cover:
+                        st.image(
+                            project_cover,
+                            use_container_width=True
+                        )
+                    else:
+                        st.markdown(
+                            "### 📁"
+                        )
+
+                    st.write(
+                        f"**{project_title}**"
+                    )
+
+                    if project_description:
+
+                        st.caption(
+                            project_description
+                        )
+
+                    else:
+
+                        st.caption(
+                            "No description provided."
+                        )
+
+                    if project_category:
+
+                        st.caption(
+                            f"Category: {project_category}"
+                        )
+
+                    if project_created:
+
+                        st.caption(
+                            f"Created: {project_created}"
+                        )
+
+                    if st.button(
+                        "Open Project",
+                        key=f"dashboard_recent_project_{project_id}",
+                        use_container_width=True,
+                    ):
+
+                        st.session_state.current_project = {
+                            "id": project_id,
+                            "title": project_title,
+                            "description": project_description,
+                            "category": project_category,
+                            "created_at": project_created,
+                        }
+
+                        st.session_state.open_workspace = True
+
+                        st.session_state.main_navigation = "Workspace"
+
+                        st.rerun()
+
+
+        st.write("")
+
+        project_col = st.columns([1, 2, 1])[1]
+
+        with project_col:
 
             if st.button(
-                "Open Project",
-                key=f"recent_project_{i}",
+                "View All Projects →",
                 use_container_width=True,
+                key="view_all_projects",
             ):
 
                 navigate_to("Projects")
-
-    st.write("")
-
-    project_col = st.columns([1, 2, 1])[1]
-
-    with project_col:
-
-        if st.button(
-            "View All Projects →",
-            use_container_width=True,
-            key="view_all_projects",
-        ):
-
-            navigate_to("Projects")
 
     # ========================================================
     # RECENT DESIGNS

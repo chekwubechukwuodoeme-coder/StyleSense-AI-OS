@@ -11,13 +11,26 @@ def render_projects():
 
     st.title("📂 Projects")
 
+    st.caption(
+        "Create and manage your fashion projects."
+    )
+
+    st.divider()
+
+    user_id = st.session_state.get(
+        "user_id"
+    )
+
+    # ========================================================
+    # CREATE PROJECT
+    # ========================================================
+
     st.subheader("Create New Project")
 
-    # ==========================
-    # CREATE PROJECT FORM
-    # ==========================
-
-    with st.form("create_project_form", clear_on_submit=True):
+    with st.form(
+        "create_project_form",
+        clear_on_submit=True
+    ):
 
         title = st.text_input(
             "Project Name",
@@ -36,7 +49,10 @@ def render_projects():
                 "Wedding",
                 "Streetwear",
                 "Corporate",
-                "Native Wear"
+                "Native Wear",
+                "Ready-to-Wear",
+                "Sportswear",
+                "Other"
             ]
         )
 
@@ -46,22 +62,21 @@ def render_projects():
             use_container_width=True
         )
 
-    # ==========================
-    # CREATE PROJECT
-    # ==========================
-
     if submitted:
 
         if not title.strip():
 
-            st.error("Please enter a project name.")
+            st.error(
+                "Please enter a project name."
+            )
 
         else:
 
             create_project(
-                title.strip(),
-                description.strip(),
-                category
+                title=title,
+                description=description,
+                category=category,
+                user_id=user_id
             )
 
             st.success(
@@ -72,13 +87,15 @@ def render_projects():
 
     st.divider()
 
-    # ==========================
-    # PROJECT LIST
-    # ==========================
+    # ========================================================
+    # YOUR PROJECTS
+    # ========================================================
 
     st.subheader("Your Projects")
 
-    projects = get_projects()
+    projects = get_projects(
+        user_id=user_id
+    )
 
     if not projects:
 
@@ -88,26 +105,32 @@ def render_projects():
 
         return
 
-    # ==========================
-    # DISPLAY PROJECTS
-    # ==========================
+    # ========================================================
+    # PROJECTS
+    # ========================================================
 
     for project in projects:
 
-        project_id = project[0]
-        project_title = project[1]
-        project_description = project[2]
-        project_category = project[3]
-        project_created = project[4]
+        (
+            project_id,
+            project_user_id,
+            project_title,
+            project_description,
+            project_category,
+            project_cover,
+            project_created
+        ) = project
 
-        with st.container(border=True):
+        with st.container(
+            border=True
+        ):
 
             st.subheader(
                 f"📁 {project_title}"
             )
 
             st.caption(
-                f"Category: {project_category}"
+                f"🏷️ {project_category}"
             )
 
             if project_description:
@@ -128,58 +151,78 @@ def render_projects():
 
             col1, col2 = st.columns(2)
 
-            # ==========================
-            # OPEN PROJECT
-            # ==========================
+            # ------------------------------------------------
+            # OPEN
+            # ------------------------------------------------
 
             with col1:
 
                 if st.button(
                     "🚀 Open Project",
-                    key=f"open_project_{project_id}",
+                    key=f"projects_open_{project_id}",
                     use_container_width=True
                 ):
 
                     st.session_state.current_project = {
+
                         "id": project_id,
+
+                        "user_id": project_user_id,
+
                         "title": project_title,
+
                         "description": project_description,
+
                         "category": project_category,
+
+                        "cover_image": project_cover,
+
                         "created_at": project_created
                     }
 
-                    # Tell app to open workspace
                     st.session_state.open_workspace = True
+
+                    st.session_state.main_navigation = (
+                        "Workspace"
+                    )
 
                     st.rerun()
 
-            # ==========================
-            # DELETE PROJECT
-            # ==========================
+            # ------------------------------------------------
+            # DELETE
+            # ------------------------------------------------
 
             with col2:
 
                 if st.button(
                     "🗑 Delete",
-                    key=f"delete_project_{project_id}",
+                    key=f"projects_delete_{project_id}",
                     use_container_width=True
                 ):
 
                     delete_project(
-                        project_id
+                        project_id,
+                        user_id=user_id
                     )
 
-                    # Clear current project if
-                    # the deleted project was open
-                    current_project = st.session_state.get(
-                        "current_project"
+                    current_project = (
+                        st.session_state.get(
+                            "current_project"
+                        )
                     )
 
                     if (
                         current_project
-                        and current_project.get("id") == project_id
+                        and current_project.get("id")
+                        == project_id
                     ):
 
                         st.session_state.current_project = None
+
+                        st.session_state.open_workspace = False
+
+                    st.success(
+                        "Project deleted."
+                    )
 
                     st.rerun()

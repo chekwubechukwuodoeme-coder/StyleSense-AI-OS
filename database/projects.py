@@ -12,54 +12,47 @@ def init_projects_table():
 
     try:
 
-        # ----------------------------------------------------
-        # Check whether projects table exists
-        # ----------------------------------------------------
-
-        cursor.execute(
-            """
+        cursor.execute("""
             SELECT name
             FROM sqlite_master
             WHERE type = 'table'
             AND name = 'projects'
-            """
-        )
+        """)
 
         table_exists = cursor.fetchone()
 
         # ----------------------------------------------------
-        # Create table if it does not exist
+        # CREATE TABLE
         # ----------------------------------------------------
 
         if not table_exists:
 
-            cursor.execute(
-                """
+            cursor.execute("""
                 CREATE TABLE projects (
 
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
 
+                    user_id INTEGER,
+
                     title TEXT NOT NULL,
 
-                    description TEXT,
+                    description TEXT DEFAULT '',
 
-                    category TEXT,
+                    category TEXT DEFAULT '',
 
-                    cover_image TEXT,
+                    cover_image TEXT DEFAULT '',
 
                     created_at
                         TIMESTAMP
                         DEFAULT CURRENT_TIMESTAMP
                 )
-                """
-            )
+            """)
 
             conn.commit()
-
             return
 
         # ----------------------------------------------------
-        # Inspect existing schema
+        # CHECK EXISTING COLUMNS
         # ----------------------------------------------------
 
         cursor.execute(
@@ -73,127 +66,36 @@ def init_projects_table():
             for column in columns
         }
 
-        required_columns = {
-            "id",
-            "title",
-            "description",
-            "category",
-            "cover_image",
-            "created_at",
-        }
-
         # ----------------------------------------------------
-        # If schema is already correct, do nothing
+        # ADD USER ID IF MISSING
         # ----------------------------------------------------
 
-        if existing_columns == required_columns:
+        if "user_id" not in existing_columns:
 
-            return
-
-        # ----------------------------------------------------
-        # MIGRATE OLD PROJECT TABLE
-        #
-        # This handles an older projects table on
-        # Streamlit Cloud.
-        # ----------------------------------------------------
-
-        cursor.execute(
-            """
-            ALTER TABLE projects
-            RENAME TO projects_old
-            """
-        )
+            cursor.execute("""
+                ALTER TABLE projects
+                ADD COLUMN user_id INTEGER
+            """)
 
         # ----------------------------------------------------
-        # Create correct table
+        # ADD COVER IMAGE IF MISSING
         # ----------------------------------------------------
 
-        cursor.execute(
-            """
-            CREATE TABLE projects (
+        if "cover_image" not in existing_columns:
 
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-
-                title TEXT NOT NULL,
-
-                description TEXT,
-
-                category TEXT,
-
-                cover_image TEXT,
-
-                created_at
-                    TIMESTAMP
-                    DEFAULT CURRENT_TIMESTAMP
-            )
-            """
-        )
-
-        # ----------------------------------------------------
-        # Determine which old columns are available
-        # ----------------------------------------------------
-
-        old_columns = {
-            column[1]
-            for column in columns
-        }
-
-        columns_to_copy = []
-
-        for column in [
-            "id",
-            "title",
-            "description",
-            "category",
-            "cover_image",
-            "created_at",
-        ]:
-
-            if column in old_columns:
-
-                columns_to_copy.append(column)
-
-        # ----------------------------------------------------
-        # Copy existing data
-        # ----------------------------------------------------
-
-        if columns_to_copy:
-
-            column_sql = ", ".join(
-                columns_to_copy
-            )
-
-            cursor.execute(
-                f"""
-                INSERT INTO projects (
-                    {column_sql}
-                )
-                SELECT
-                    {column_sql}
-                FROM projects_old
-                """
-            )
-
-        # ----------------------------------------------------
-        # Remove old table
-        # ----------------------------------------------------
-
-        cursor.execute(
-            "DROP TABLE projects_old"
-        )
+            cursor.execute("""
+                ALTER TABLE projects
+                ADD COLUMN cover_image TEXT DEFAULT ''
+            """)
 
         conn.commit()
-
-        print(
-            "PROJECTS TABLE MIGRATED SUCCESSFULLY"
-        )
 
     except Exception as e:
 
         conn.rollback()
 
         print(
-            "PROJECT TABLE MIGRATION ERROR:",
+            "PROJECT TABLE ERROR:",
             repr(e)
         )
 
@@ -211,12 +113,15 @@ def init_projects_table():
 def create_project(
     title,
     description,
-    category
+    category,
+    user_id=None,
+    cover_image=""
 ):
 
     title = (title or "").strip()
     description = (description or "").strip()
     category = (category or "").strip()
+    cover_image = (cover_image or "").strip()
 
     if not title:
 
@@ -224,28 +129,30 @@ def create_project(
             "Project title cannot be empty."
         )
 
+    init_projects_table()
+
     conn = get_connection()
     cursor = conn.cursor()
 
     try:
 
-        cursor.execute(
-            """
+        cursor.execute("""
             INSERT INTO projects (
+                user_id,
                 title,
                 description,
                 category,
                 cover_image
             )
-            VALUES (?, ?, ?, ?)
-            """,
-            (
-                title,
-                description,
-                category,
-                None
-            )
-        )
+
+            VALUES (?, ?, ?, ?, ?)
+        """, (
+            user_id,
+            title,
+            description,
+            category,
+            cover_image
+        ))
 
         conn.commit()
 
@@ -271,27 +178,117 @@ def create_project(
 # GET PROJECTS
 # ============================================================
 
-def get_projects():
+def get_projects(user_id=None):
+
+    init_projects_table()
 
     conn = get_connection()
     cursor = conn.cursor()
 
     try:
 
-        cursor.execute(
-            """
-            SELECT
-                id,
-                title,
-                description,
-                category,
-                created_at
-            FROM projects
-            ORDER BY created_at DESC
-            """
-        )
+        if user_id is None:
+
+            cursor.execute("""
+                SELECT
+                    id,
+                    user_id,
+                    title,
+                    description,
+                    category,
+                    cover_image,
+                    created_at
+
+                FROM projects
+
+                ORDER BY created_at DESC
+            """)
+
+        else:
+
+            cursor.execute("""
+                SELECT
+                    id,
+                    user_id,
+                    title,
+                    description,
+                    category,
+                    cover_image,
+                    created_at
+
+                FROM projects
+
+                WHERE user_id = ?
+
+                ORDER BY created_at DESC
+            """, (
+                user_id,
+            ))
 
         return cursor.fetchall()
+
+    finally:
+
+        conn.close()
+
+
+# ============================================================
+# GET SINGLE PROJECT
+# ============================================================
+
+def get_project(
+    project_id,
+    user_id=None
+):
+
+    init_projects_table()
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    try:
+
+        if user_id is None:
+
+            cursor.execute("""
+                SELECT
+                    id,
+                    user_id,
+                    title,
+                    description,
+                    category,
+                    cover_image,
+                    created_at
+
+                FROM projects
+
+                WHERE id = ?
+            """, (
+                project_id,
+            ))
+
+        else:
+
+            cursor.execute("""
+                SELECT
+                    id,
+                    user_id,
+                    title,
+                    description,
+                    category,
+                    cover_image,
+                    created_at
+
+                FROM projects
+
+                WHERE id = ?
+                AND user_id = ?
+            """, (
+                project_id,
+                user_id
+            ))
+
+        return cursor.fetchone()
 
     finally:
 
@@ -302,22 +299,41 @@ def get_projects():
 # DELETE PROJECT
 # ============================================================
 
-def delete_project(project_id):
+def delete_project(
+    project_id,
+    user_id=None
+):
+
+    init_projects_table()
 
     conn = get_connection()
     cursor = conn.cursor()
 
     try:
 
-        cursor.execute(
-            """
-            DELETE FROM projects
-            WHERE id = ?
-            """,
-            (project_id,)
-        )
+        if user_id is None:
+
+            cursor.execute("""
+                DELETE FROM projects
+                WHERE id = ?
+            """, (
+                project_id,
+            ))
+
+        else:
+
+            cursor.execute("""
+                DELETE FROM projects
+                WHERE id = ?
+                AND user_id = ?
+            """, (
+                project_id,
+                user_id
+            ))
 
         conn.commit()
+
+        return cursor.rowcount > 0
 
     finally:
 
