@@ -193,9 +193,9 @@ def render_login():
 
     st.divider()
 
-    # --------------------------------------------------------
+    # ========================================================
     # EMAIL
-    # --------------------------------------------------------
+    # ========================================================
 
     email = st.text_input(
         "Email",
@@ -203,9 +203,9 @@ def render_login():
         key="login_email"
     )
 
-    # --------------------------------------------------------
+    # ========================================================
     # PASSWORD
-    # --------------------------------------------------------
+    # ========================================================
 
     password = st.text_input(
         "Password",
@@ -214,9 +214,9 @@ def render_login():
         key="login_password"
     )
 
-    # --------------------------------------------------------
-    # EMAIL / PASSWORD LOGIN
-    # --------------------------------------------------------
+    # ========================================================
+    # LOGIN
+    # ========================================================
 
     if st.button(
         "🔐 Login",
@@ -245,7 +245,7 @@ def render_login():
             return
 
         # ----------------------------------------------------
-        # AUTHENTICATE
+        # AUTHENTICATE USER
         # ----------------------------------------------------
 
         user, error_message = authenticate_user(
@@ -253,13 +253,41 @@ def render_login():
             password=password
         )
 
+        # ----------------------------------------------------
+        # SUCCESS
+        # ----------------------------------------------------
+
         if user:
 
-            (
-                user_id,
-                full_name,
-                user_email
-            ) = user
+            # IMPORTANT:
+            # authenticate_user() returns a dictionary.
+            # Do NOT unpack it into 3 variables.
+
+            user_id = user.get("id")
+
+            full_name = (
+                user.get("full_name")
+                or "StyleSense User"
+            )
+
+            user_email = (
+                user.get("email")
+                or email
+            )
+
+            profession = (
+                user.get("profession")
+                or "Fashion Designer"
+            )
+
+            avatar_url = (
+                user.get("avatar_url")
+                or ""
+            )
+
+            # ------------------------------------------------
+            # SAVE USER SESSION
+            # ------------------------------------------------
 
             st.session_state.logged_in = True
 
@@ -269,6 +297,16 @@ def render_login():
 
             st.session_state.user_email = user_email
 
+            st.session_state.user_profession = profession
+
+            st.session_state.user_avatar_url = avatar_url
+
+            # ------------------------------------------------
+            # DEFAULT PAGE
+            # ------------------------------------------------
+
+            st.session_state.main_navigation = "Dashboard"
+
             st.session_state.auth_page = "login"
 
             st.success(
@@ -276,6 +314,10 @@ def render_login():
             )
 
             st.rerun()
+
+        # ----------------------------------------------------
+        # LOGIN FAILED
+        # ----------------------------------------------------
 
         else:
 
