@@ -248,14 +248,10 @@ def render_login():
         # AUTHENTICATE
         # ----------------------------------------------------
 
-        user = authenticate_user(
+        user, error_message = authenticate_user(
             email=email,
             password=password
         )
-
-        # ----------------------------------------------------
-        # LOGIN SUCCESS
-        # ----------------------------------------------------
 
         if user:
 
@@ -267,17 +263,11 @@ def render_login():
 
             st.session_state.logged_in = True
 
-            st.session_state.user_id = (
-                user_id
-            )
+            st.session_state.user_id = user_id
 
-            st.session_state.user_name = (
-                full_name
-            )
+            st.session_state.user_name = full_name
 
-            st.session_state.user_email = (
-                user_email
-            )
+            st.session_state.user_email = user_email
 
             st.session_state.auth_page = "login"
 
@@ -287,19 +277,10 @@ def render_login():
 
             st.rerun()
 
-        # ----------------------------------------------------
-        # LOGIN FAILED
-        # ----------------------------------------------------
-
         else:
 
             st.error(
-                "❌ Invalid email or password."
-            )
-
-            st.info(
-                "If you just created your account, "
-                "make sure you have verified your email."
+                f"❌ {error_message}"
             )
 
     # ========================================================

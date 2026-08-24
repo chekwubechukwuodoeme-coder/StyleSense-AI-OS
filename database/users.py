@@ -11,6 +11,8 @@ from supabase.client import ClientOptions
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
 SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 
+AVATAR_BUCKET = "avatars"
+
 
 # ============================================================
 # STREAMLIT STORAGE
@@ -19,28 +21,22 @@ SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 class StreamlitStorage:
     """
     Storage adapter used by Supabase Auth.
-
-    Supabase uses this storage to keep:
-        - authentication session
-        - refresh token
-        - other temporary auth state
-
-    Streamlit session_state is scoped to the current browser
-    session, which prevents different users from sharing auth
-    state.
     """
 
     def get_item(self, key):
+
         return st.session_state.get(
             f"_supabase_{key}"
         )
 
     def set_item(self, key, value):
+
         st.session_state[
             f"_supabase_{key}"
         ] = value
 
     def remove_item(self, key):
+
         st.session_state.pop(
             f"_supabase_{key}",
             None
@@ -52,12 +48,6 @@ class StreamlitStorage:
 # ============================================================
 
 def get_supabase():
-    """
-    Return the Supabase client for the current Streamlit
-    browser session.
-
-    Authentication state is stored per Streamlit session.
-    """
 
     if "supabase_client" not in st.session_state:
 
@@ -111,7 +101,9 @@ def create_user(full_name, email, password):
                 "password": password,
                 "options": {
                     "data": {
-                        "full_name": full_name
+                        "full_name": full_name,
+                        "profession": "Fashion Designer",
+                        "avatar_url": "",
                     }
                 }
             }
@@ -119,10 +111,6 @@ def create_user(full_name, email, password):
 
         if not response.user:
             return False, "Unable to create account."
-
-        # ----------------------------------------------------
-        # EMAIL CONFIRMATION REQUIRED
-        # ----------------------------------------------------
 
         if response.session is None:
 
@@ -132,10 +120,6 @@ def create_user(full_name, email, password):
                 "Please check your email and verify your account "
                 "before logging in."
             )
-
-        # ----------------------------------------------------
-        # SESSION CREATED IMMEDIATELY
-        # ----------------------------------------------------
 
         return True, response.user
 
@@ -173,7 +157,7 @@ def authenticate_user(email, password):
     password = password or ""
 
     if not email or not password:
-        return None
+        return None, "Please enter your email and password."
 
     try:
 
@@ -187,20 +171,29 @@ def authenticate_user(email, password):
         )
 
         if not response.user:
-            return None
+
+            return None, "Unable to authenticate this account."
 
         user = response.user
 
         user_email = user.email
 
-        full_name = None
+        metadata = user.user_metadata or {}
 
-        if user.user_metadata:
+        full_name = (
+            metadata.get("full_name")
+            or metadata.get("name")
+        )
 
-            full_name = (
-                user.user_metadata.get("full_name")
-                or user.user_metadata.get("name")
-            )
+        profession = (
+            metadata.get("profession")
+            or "Fashion Designer"
+        )
+
+        avatar_url = (
+            metadata.get("avatar_url")
+            or ""
+        )
 
         if not full_name:
 
@@ -211,19 +204,63 @@ def authenticate_user(email, password):
             )
 
         return (
-            user.id,
-            full_name,
-            user_email
+            {
+                "id": user.id,
+                "full_name": full_name,
+                "email": user_email,
+                "profession": profession,
+                "avatar_url": avatar_url,
+            },
+            None
         )
 
     except Exception as e:
+
+        error = str(e)
+        lower = error.lower()
 
         print(
             "EMAIL LOGIN ERROR:",
             repr(e)
         )
 
-        return None
+        if (
+            "email_not_confirmed" in lower
+            or "email not confirmed" in lower
+        ):
+
+            return (
+                None,
+                "Your email has not been verified yet. "
+                "Please check your inbox and click the "
+                "Supabase confirmation link."
+            )
+
+        if (
+            "invalid login credentials" in lower
+            or "invalid credentials" in lower
+        ):
+
+            return (
+                None,
+                "Incorrect email or password."
+            )
+
+        if (
+            "rate limit" in lower
+            or "too many requests" in lower
+        ):
+
+            return (
+                None,
+                "Too many login attempts. "
+                "Please wait a moment and try again."
+            )
+
+        return (
+            None,
+            f"Login error: {error}"
+        )
 
 
 # ============================================================
@@ -256,20 +293,26 @@ def get_current_user():
             None
         )
 
-        user_metadata = getattr(
+        metadata = getattr(
             user,
             "user_metadata",
             None
+        ) or {}
+
+        full_name = (
+            metadata.get("full_name")
+            or metadata.get("name")
         )
 
-        full_name = None
+        profession = (
+            metadata.get("profession")
+            or "Fashion Designer"
+        )
 
-        if user_metadata:
-
-            full_name = (
-                user_metadata.get("full_name")
-                or user_metadata.get("name")
-            )
+        avatar_url = (
+            metadata.get("avatar_url")
+            or ""
+        )
 
         if not full_name:
 
@@ -283,6 +326,8 @@ def get_current_user():
             "id": user.id,
             "full_name": full_name,
             "email": user_email,
+            "profession": profession,
+            "avatar_url": avatar_url,
         }
 
     except Exception as e:
@@ -309,14 +354,9 @@ def get_user(user_id):
             return None
 
         if str(user["id"]) != str(user_id):
-
             return None
 
-        return (
-            user["id"],
-            user["full_name"],
-            user["email"]
-        )
+        return user
 
     except Exception as e:
 
@@ -326,6 +366,357 @@ def get_user(user_id):
         )
 
         return None
+
+
+# ============================================================
+# UPLOAD PROFILE PICTURE
+# ============================================================
+
+def upload_profile_avatar(uploaded_file):
+
+    if uploaded_file is None:
+        return None, "No image selected."
+
+    try:
+
+        supabase = get_supabase()
+
+        user = get_current_user()
+
+        if not user:
+            return None, "Unable to identify the current user."
+
+        user_id = str(user["id"])
+
+        # ----------------------------------------------------
+        # GET FILE INFORMATION
+        # ----------------------------------------------------
+
+        file_bytes = uploaded_file.getvalue()
+
+        content_type = (
+            uploaded_file.type
+            or "image/jpeg"
+        )
+
+        original_name = (
+            uploaded_file.name
+            or "profile.jpg"
+        )
+
+        extension = original_name.rsplit(
+            ".",
+            1
+        )[-1].lower()
+
+        allowed_extensions = {
+            "jpg",
+            "jpeg",
+            "png",
+            "webp",
+        }
+
+        if extension not in allowed_extensions:
+
+            return (
+                None,
+                "Please upload a JPG, JPEG, PNG or WEBP image."
+            )
+
+        # ----------------------------------------------------
+        # CREATE UNIQUE FILE PATH
+        # ----------------------------------------------------
+
+        file_path = (
+            f"{user_id}/profile.{extension}"
+        )
+
+        # ----------------------------------------------------
+        # UPLOAD TO SUPABASE STORAGE
+        # ----------------------------------------------------
+
+        supabase.storage \
+            .from_(AVATAR_BUCKET) \
+            .upload(
+                file_path,
+                file_bytes,
+                {
+                    "content-type": content_type,
+                    "upsert": "true",
+                }
+            )
+
+        # ----------------------------------------------------
+        # GET PUBLIC URL
+        # ----------------------------------------------------
+
+        public_url = (
+            supabase.storage
+            .from_(AVATAR_BUCKET)
+            .get_public_url(file_path)
+        )
+
+        # Some versions return a string while others may
+        # return an object/dictionary.
+
+        if isinstance(public_url, str):
+
+            avatar_url = public_url
+
+        elif isinstance(public_url, dict):
+
+            avatar_url = (
+                public_url.get("publicUrl")
+                or public_url.get("public_url")
+            )
+
+        else:
+
+            avatar_url = getattr(
+                public_url,
+                "public_url",
+                None
+            )
+
+        if not avatar_url:
+
+            return (
+                None,
+                "Image uploaded, but the public URL could not be created."
+            )
+
+        return avatar_url, None
+
+    except Exception as e:
+
+        print(
+            "UPLOAD PROFILE AVATAR ERROR:",
+            repr(e)
+        )
+
+        return (
+            None,
+            f"Profile image upload failed: {e}"
+        )
+
+
+# ============================================================
+# UPLOAD PROFILE IMAGE
+# ============================================================
+
+def upload_profile_image(uploaded_file):
+
+    if uploaded_file is None:
+
+        return (
+            False,
+            "",
+            "No image selected."
+        )
+
+    try:
+
+        supabase = get_supabase()
+
+        user = get_current_user()
+
+        if not user:
+
+            return (
+                False,
+                "",
+                "You must be logged in."
+            )
+
+        user_id = str(user["id"])
+
+        file_extension = (
+            uploaded_file.name
+            .split(".")[-1]
+            .lower()
+        )
+
+        # ----------------------------------------------------
+        # CREATE FILE PATH
+        # ----------------------------------------------------
+
+        file_path = (
+            f"{user_id}/profile.{file_extension}"
+        )
+
+        file_bytes = uploaded_file.getvalue()
+
+        # ----------------------------------------------------
+        # DELETE OLD PROFILE IMAGE(S)
+        # ----------------------------------------------------
+
+        old_files = (
+            supabase.storage
+            .from_("profile-images")
+            .list(user_id)
+        )
+
+        if old_files:
+
+            files_to_remove = []
+
+            for file in old_files:
+
+                file_name = file.get(
+                    "name"
+                )
+
+                if file_name:
+
+                    files_to_remove.append(
+                        f"{user_id}/{file_name}"
+                    )
+
+            if files_to_remove:
+
+                supabase.storage \
+                    .from_("profile-images") \
+                    .remove(
+                        files_to_remove
+                    )
+
+        # ----------------------------------------------------
+        # UPLOAD NEW PROFILE IMAGE
+        # ----------------------------------------------------
+
+        supabase.storage \
+            .from_("profile-images") \
+            .upload(
+                file_path,
+                file_bytes,
+                {
+                    "content-type": uploaded_file.type
+                }
+            )
+
+        # ----------------------------------------------------
+        # GET PUBLIC URL
+        # ----------------------------------------------------
+
+        public_url = (
+            supabase.storage
+            .from_("profile-images")
+            .get_public_url(
+                file_path
+            )
+        )
+
+        # ----------------------------------------------------
+        # SAVE AVATAR URL TO SUPABASE AUTH
+        # ----------------------------------------------------
+
+        response = supabase.auth.update_user(
+            {
+                "data": {
+                    "avatar_url": public_url
+                }
+            }
+        )
+
+        if not response.user:
+
+            return (
+                False,
+                "",
+                "Profile image could not be saved."
+            )
+
+        # ----------------------------------------------------
+        # UPDATE STREAMLIT SESSION
+        # ----------------------------------------------------
+
+        st.session_state.user_avatar_url = (
+            public_url
+        )
+
+        return (
+            True,
+            public_url,
+            "Profile picture updated successfully."
+        )
+
+    except Exception as e:
+
+        print(
+            "UPLOAD PROFILE IMAGE ERROR:",
+            repr(e)
+        )
+
+        return (
+            False,
+            "",
+            str(e)
+        )
+
+
+# ============================================================
+# UPDATE PROFILE
+# ============================================================
+
+def update_user_profile(
+    full_name,
+    profession,
+    avatar_url=""
+):
+
+    full_name = (full_name or "").strip()
+    profession = (profession or "").strip()
+    avatar_url = (avatar_url or "").strip()
+
+    if not full_name:
+
+        return False, "Please enter your full name."
+
+    if not profession:
+
+        return False, "Please enter your profession."
+
+    try:
+
+        supabase = get_supabase()
+
+        response = supabase.auth.update_user(
+            {
+                "data": {
+                    "full_name": full_name,
+                    "profession": profession,
+                    "avatar_url": avatar_url,
+                }
+            }
+        )
+
+        if not response.user:
+
+            return (
+                False,
+                "Unable to update your profile."
+            )
+
+        # ----------------------------------------------------
+        # UPDATE STREAMLIT SESSION
+        # ----------------------------------------------------
+
+        st.session_state.user_name = full_name
+
+        st.session_state.user_profession = profession
+
+        st.session_state.user_avatar_url = avatar_url
+
+        return True, "Profile updated successfully."
+
+    except Exception as e:
+
+        print(
+            "UPDATE PROFILE ERROR:",
+            repr(e)
+        )
+
+        return False, str(e)
 
 
 # ============================================================
@@ -340,18 +731,10 @@ def logout_user():
 
         supabase.auth.sign_out()
 
-        # ----------------------------------------------------
-        # CLEAR SUPABASE CLIENT
-        # ----------------------------------------------------
-
         st.session_state.pop(
             "supabase_client",
             None
         )
-
-        # ----------------------------------------------------
-        # CLEAR SUPABASE STORAGE
-        # ----------------------------------------------------
 
         for key in list(
             st.session_state.keys()
@@ -363,10 +746,6 @@ def logout_user():
 
                 del st.session_state[key]
 
-        # ----------------------------------------------------
-        # CLEAR APPLICATION AUTH STATE
-        # ----------------------------------------------------
-
         st.session_state.logged_in = False
 
         st.session_state.user_id = None
@@ -374,6 +753,10 @@ def logout_user():
         st.session_state.user_name = None
 
         st.session_state.user_email = None
+
+        st.session_state.user_profession = None
+
+        st.session_state.user_avatar_url = None
 
         st.session_state.auth_page = "login"
 

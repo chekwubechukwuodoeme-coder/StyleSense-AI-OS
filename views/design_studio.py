@@ -1,52 +1,510 @@
 import io
 import urllib.request
+import uuid
+import threading
+from datetime import datetime
 
 import streamlit as st
 
-from datetime import datetime
 from ai import generate_design
+
 from image_generator import (
     generate_image,
     generate_image_from_reference
 )
-from pdf_generator import create_pdf
 
+from database.database import (
+    save_design_to_database,
+    create_design_job,
+    get_design_job,
+    update_design_job
+)
+
+from utilis.image_utilis import (
+    image_to_bytes
+)
+
+
+# ============================================================
+# HELPER FUNCTIONS
+# ============================================================
+
+def get_image_bytes(image):
+    """
+    Convert any supported image object into bytes.
+
+    This is used for:
+    - Downloading generated images
+    - Saving images to SQLite
+    """
+
+    if image is None:
+
+        return None
+
+    try:
+
+        return image_to_bytes(
+            image
+        )
+
+    except Exception:
+
+        pass
+
+    # --------------------------------------------------------
+    # Raw bytes
+    # --------------------------------------------------------
+
+    if isinstance(
+        image,
+        bytes
+    ):
+
+        return image
+
+    # --------------------------------------------------------
+    # BytesIO
+    # --------------------------------------------------------
+
+    if isinstance(
+        image,
+        io.BytesIO
+    ):
+
+        try:
+
+            image.seek(0)
+
+            return image.read()
+
+        except Exception:
+
+            return None
+
+    # --------------------------------------------------------
+    # File-like objects
+    # --------------------------------------------------------
+
+    if hasattr(
+        image,
+        "read"
+    ):
+
+        try:
+
+            position = None
+
+            if hasattr(
+                image,
+                "tell"
+            ):
+
+                position = image.tell()
+
+            data = image.read()
+
+            if position is not None:
+
+                try:
+
+                    image.seek(
+                        position
+                    )
+
+                except Exception:
+
+                    pass
+
+            return data
+
+        except Exception:
+
+            return None
+
+    # --------------------------------------------------------
+    # PIL images
+    # --------------------------------------------------------
+
+    try:
+
+        from PIL import Image
+
+        if isinstance(
+            image,
+            Image.Image
+        ):
+
+            buffer = io.BytesIO()
+
+            image.save(
+                buffer,
+                format="PNG"
+            )
+
+            buffer.seek(0)
+
+            return buffer.read()
+
+    except Exception:
+
+        pass
+
+    return None
+
+
+# ============================================================
+# SAFE SAVE
+# ============================================================
+
+def save_design(design_data):
+    """
+    Save a design to the permanent SQLite database
+    and the current Streamlit session.
+    """
+
+    if "saved_designs" not in st.session_state:
+
+        st.session_state.saved_designs = []
+
+    # --------------------------------------------------------
+    # Make a copy
+    # --------------------------------------------------------
+
+    database_design = dict(
+        design_data
+    )
+
+    # --------------------------------------------------------
+    # Convert image to bytes
+    # --------------------------------------------------------
+
+    image = database_design.get(
+        "image"
+    )
+
+    image_bytes = get_image_bytes(
+        image
+    )
+
+    database_design["image_data"] = (
+        image_bytes
+    )
+
+    # --------------------------------------------------------
+    # Save to database
+    # --------------------------------------------------------
+
+    design_id = save_design_to_database(
+        database_design
+    )
+
+    # --------------------------------------------------------
+    # Session copy
+    # --------------------------------------------------------
+
+    session_design = dict(
+        design_data
+    )
+
+    session_design["id"] = (
+        design_id
+    )
+
+    st.session_state.saved_designs.append(
+        session_design
+    )
+
+    return design_id
+
+# ============================================================
+# BACKGROUND DESIGN GENERATION
+# ============================================================
+
+def generate_design_job(
+    job_id,
+    user_id,
+    image_prompt
+):
+    """
+    Generate an AI fashion design and update the
+    persistent design job when finished.
+    """
+
+    try:
+
+        # ----------------------------------------------------
+        # MARK JOB AS RUNNING
+        # ----------------------------------------------------
+
+        update_design_job(
+            job_id,
+            "running"
+        )
+
+        # ----------------------------------------------------
+        # GENERATE IMAGE
+        # ----------------------------------------------------
+
+        image = generate_image(
+            image_prompt
+        )
+
+        # ----------------------------------------------------
+        # CONVERT IMAGE TO BYTES
+        # ----------------------------------------------------
+
+        image_bytes = get_image_bytes(
+            image
+        )
+
+        if not image_bytes:
+
+            raise Exception(
+                "AI generated an image but no image data was returned."
+            )
+
+        # ----------------------------------------------------
+        # SAVE RESULT
+        # ----------------------------------------------------
+
+        update_design_job(
+            job_id,
+            "completed",
+            image_data=image_bytes
+        )
+
+    except Exception as e:
+
+        # ----------------------------------------------------
+        # SAVE ERROR
+        # ----------------------------------------------------
+
+        update_design_job(
+            job_id,
+            "failed",
+            error=str(e)
+        )
+
+    # ========================================================
+    # BACKGROUND DESIGN JOB
+    # ========================================================
+
+    active_job_id = st.session_state.get(
+        "active_design_job"
+    )
+
+    if active_job_id:
+
+        job = get_design_job(
+            active_job_id
+        )
+
+        if job:
+
+            status = job.get(
+                "status"
+            )
+
+            # ------------------------------------------------
+            # COMPLETED
+            # ------------------------------------------------
+
+            if status == "completed":
+
+                st.success(
+                    "🎉 Your AI fashion design is ready!"
+                )
+
+                image_data = job.get(
+                    "image_data"
+                )
+
+                if image_data:
+
+                    st.subheader(
+                        "🎨 Generated Design"
+                    )
+
+                    image_bytes = bytes(
+                        image_data
+                    )
+
+                    st.image(
+                        image_bytes,
+                        use_container_width=True
+                    )
+
+                    st.download_button(
+                        "⬇️ Download Design",
+                        data=image_bytes,
+                        file_name="StyleSense_AI_Design.png",
+                        mime="image/png",
+                        use_container_width=True,
+                        key=f"completed_download_{active_job_id}"
+                    )
+
+                else:
+
+                    st.error(
+                        "The AI finished, but the generated image was not saved."
+                    )
+
+            # ------------------------------------------------
+            # RUNNING
+            # ------------------------------------------------
+
+            elif status == "running":
+
+                st.info(
+                    "🧠 StyleSense AI is still generating your design..."
+                )
+
+            # ------------------------------------------------
+            # PENDING
+            # ------------------------------------------------
+
+            elif status == "pending":
+
+                st.info(
+                    "⏳ Your design is waiting to start..."
+                )
+
+            # ------------------------------------------------
+            # FAILED
+            # ------------------------------------------------
+
+            elif status == "failed":
+
+                st.error(
+                    "❌ Design generation failed."
+                )
+
+                if job.get("error"):
+
+                    st.caption(
+                        job["error"]
+                    )
+
+# ============================================================
+# MAIN DESIGN STUDIO
+# ============================================================
 
 def render_design_studio():
 
-    st.title("✨ AI Design Studio Pro")
+    active_job_id = st.session_state.get(
+        "active_design_job"
+    )
+
+    if active_job_id:
+
+        job = get_design_job(
+            active_job_id
+        )
+
+        if job:
+
+            if job["status"] == "completed":
+
+                st.success(
+                    "🎉 Your AI fashion design is ready!"
+                )
+
+                image_data = job.get(
+                    "image_data"
+                )
+
+                if image_data:
+
+                    st.success(
+                        f"✅ Image data found: {len(image_data):,} bytes"
+                    )
+
+                    st.image(
+                        bytes(image_data),
+                        use_container_width=True
+                    )
+
+                else:
+
+                    st.error(
+                        "❌ Job completed, but image_data is empty."
+                    )
+
+            elif job["status"] == "running":
+
+                st.info(
+                    "🧠 StyleSense AI is still generating your design..."
+                )
+
+            elif job["status"] == "failed":
+
+                st.error(
+                    "❌ Design generation failed."
+                )
+
+    st.title(
+        "✨ AI Design Studio"
+    )
 
     st.caption(
-        "Create luxury fashion collections powered by AI."
+        "Your intelligent fashion workspace for creating, "
+        "transforming and managing AI-powered fashion designs."
     )
 
     st.divider()
 
-    # ============================================================
+    # ========================================================
     # SESSION STATE
-    # ============================================================
+    # ========================================================
 
     if "saved_designs" not in st.session_state:
+
         st.session_state.saved_designs = []
 
     if "current_design" not in st.session_state:
+
         st.session_state.current_design = ""
 
     if "advanced_prompt" not in st.session_state:
+
         st.session_state.advanced_prompt = ""
 
     if "advanced_enhanced_prompt" not in st.session_state:
+
         st.session_state.advanced_enhanced_prompt = ""
 
     if "advanced_image" not in st.session_state:
+
         st.session_state.advanced_image = None
 
     if "reference_image_result" not in st.session_state:
+
         st.session_state.reference_image_result = None
 
-    # ============================================================
-    # REFERENCE IMAGE FROM FASHION INSPIRATION
-    # ============================================================
+    if "advanced_ai_creativity" not in st.session_state:
+
+        st.session_state.advanced_ai_creativity = 8
+
+    # ========================================================
+    # BACKGROUND DESIGN GENERATION
+    # ========================================================
+
+    if "design_generation_job_id" not in st.session_state:
+
+        st.session_state.design_generation_job_id = None
+
+    if "design_generation_type" not in st.session_state:
+
+        st.session_state.design_generation_type = None
+
+    if "design_generation_prompt" not in st.session_state:
+
+        st.session_state.design_generation_prompt = None
+
+    # ========================================================
+    # FASHION INSPIRATION
+    # ========================================================
 
     studio_reference_url = st.session_state.get(
         "studio_reference_image_url"
@@ -62,47 +520,69 @@ def render_design_studio():
         "Pexels"
     )
 
-    # ============================================================
+    # ========================================================
     # TABS
-    # ============================================================
+    # ========================================================
 
     tab1, tab2, tab3 = st.tabs(
         [
-            "🎨 Design",
-            "⚙ Advanced",
-            "📂 Design Library"
+            "🎨 Create",
+            "✨ Prompt Studio",
+            "🖼 Reference"
         ]
     )
 
-    # ============================================================
-    # DESIGN TAB
-    # ============================================================
+    # ========================================================
+    # TAB 1 — GUIDED DESIGN
+    # ========================================================
 
     with tab1:
 
+        st.subheader(
+            "🎨 Guided AI Fashion Designer"
+        )
+
+        st.caption(
+            "Tell StyleSense who the design is for, what they are "
+            "wearing, where they are going and how you want it to look."
+        )
+
         left, right = st.columns(2)
+
+        # ====================================================
+        # DESIGNER PROFILE
+        # ====================================================
 
         with left:
 
-            st.subheader("Designer")
+            st.subheader(
+                "👤 Designer Profile"
+            )
 
             gender = st.selectbox(
                 "Gender",
-                ["Male", "Female", "Unisex"]
+                [
+                    "Male",
+                    "Female",
+                    "Unisex"
+                ],
+                key="guided_gender"
             )
 
             age = st.slider(
                 "Age",
                 5,
                 80,
-                25
+                25,
+                key="guided_age"
             )
 
             height = st.slider(
                 "Height (cm)",
                 120,
                 220,
-                170
+                170,
+                key="guided_height"
             )
 
             body_shape = st.selectbox(
@@ -113,7 +593,8 @@ def render_design_studio():
                     "Average",
                     "Curvy",
                     "Plus Size"
-                ]
+                ],
+                key="guided_body_shape"
             )
 
             skin_tone = st.selectbox(
@@ -124,12 +605,15 @@ def render_design_studio():
                     "Brown",
                     "Dark Brown",
                     "Deep Black"
-                ]
+                ],
+                key="guided_skin_tone"
             )
 
             st.divider()
 
-            st.subheader("Fashion")
+            st.subheader(
+                "👗 Fashion"
+            )
 
             category = st.selectbox(
                 "Category",
@@ -142,7 +626,8 @@ def render_design_studio():
                     "Evening Wear",
                     "Casual",
                     "Sport Wear"
-                ]
+                ],
+                key="guided_category"
             )
 
             fabric = st.selectbox(
@@ -159,7 +644,8 @@ def render_design_studio():
                     "Linen",
                     "Leather",
                     "Denim"
-                ]
+                ],
+                key="guided_fabric"
             )
 
             colors = st.multiselect(
@@ -176,12 +662,19 @@ def render_design_studio():
                     "Cream",
                     "Brown",
                     "Red"
-                ]
+                ],
+                key="guided_colors"
             )
+
+        # ====================================================
+        # OCCASION
+        # ====================================================
 
         with right:
 
-            st.subheader("Occasion")
+            st.subheader(
+                "🎯 Occasion & Direction"
+            )
 
             occasion = st.selectbox(
                 "Event",
@@ -197,7 +690,8 @@ def render_design_studio():
                     "Vacation",
                     "Award Ceremony",
                     "Photoshoot"
-                ]
+                ],
+                key="guided_occasion"
             )
 
             budget = st.select_slider(
@@ -209,7 +703,8 @@ def render_design_studio():
                     "₦200,000",
                     "₦500,000",
                     "Unlimited"
-                ]
+                ],
+                key="guided_budget"
             )
 
             complexity = st.selectbox(
@@ -218,7 +713,8 @@ def render_design_studio():
                     "Simple",
                     "Moderate",
                     "Luxury"
-                ]
+                ],
+                key="guided_complexity"
             )
 
             theme = st.selectbox(
@@ -230,7 +726,8 @@ def render_design_studio():
                     "Traditional Heritage",
                     "Minimalist",
                     "Futuristic"
-                ]
+                ],
+                key="guided_theme"
             )
 
             country = st.selectbox(
@@ -244,7 +741,8 @@ def render_design_studio():
                     "United States",
                     "France",
                     "Italy"
-                ]
+                ],
+                key="guided_country"
             )
 
             climate = st.selectbox(
@@ -254,39 +752,775 @@ def render_design_studio():
                     "Cold",
                     "Rainy",
                     "Dry"
-                ]
+                ],
+                key="guided_climate"
             )
 
             embroidery = st.checkbox(
-                "Include Embroidery",
-                value=True
+                "✨ Include Embroidery",
+                value=True,
+                key="guided_embroidery"
             )
 
             accessories = st.checkbox(
-                "Recommend Accessories",
-                value=True
+                "👜 Recommend Accessories",
+                value=True,
+                key="guided_accessories"
             )
 
-    # ============================================================
-    # ADVANCED TAB
-    # ============================================================
-
-    with tab2:
-
-        st.subheader("⚙ Advanced AI Design")
-
-        st.caption(
-            "Create fashion concepts using natural language, "
-            "advanced controls and visual references."
-        )
-
-        # ========================================================
-        # AI SETTINGS
-        # ========================================================
+        # ====================================================
+        # AI CREATIVITY
+        # ====================================================
 
         st.divider()
 
-        st.subheader("🧠 AI Settings")
+        st.subheader(
+            "🧠 AI Creativity"
+        )
+
+        ai_creativity = st.slider(
+            "How creative should StyleSense be?",
+            1,
+            10,
+            8,
+            key="guided_ai_creativity"
+        )
+
+        st.caption(
+            "Higher values allow StyleSense to create more "
+            "experimental and unconventional fashion concepts."
+        )
+
+        # ====================================================
+        # GENERATE
+        # ====================================================
+
+        st.divider()
+
+        if st.button(
+            "🚀 Generate Luxury Fashion Design",
+            use_container_width=True,
+            type="primary",
+            key="generate_guided_design"
+        ):
+
+            with st.spinner(
+                "🧠 StyleSense AI is designing your fashion concept..."
+            ):
+
+                try:
+
+                    # ----------------------------------------
+                    # AI CONCEPT
+                    # ----------------------------------------
+
+                    result = generate_design(
+                        gender,
+                        age,
+                        height,
+                        body_shape,
+                        skin_tone,
+                        category,
+                        fabric,
+                        occasion,
+                        budget,
+                        colors,
+                        complexity,
+                        theme,
+                        embroidery,
+                        accessories,
+                        ai_creativity,
+                        country,
+                        climate
+                    )
+
+                    st.session_state.current_design = (
+                        result
+                    )
+
+                    st.success(
+                        "✅ Fashion concept generated."
+                    )
+
+                    st.divider()
+
+                    st.subheader(
+                        "📝 AI Fashion Concept"
+                    )
+
+                    st.write(
+                        result
+                    )
+
+                    # ----------------------------------------
+                    # IMAGE PROMPT
+                    # ----------------------------------------
+
+                    image_prompt = f"""
+Create a professional luxury fashion design.
+
+Gender: {gender}
+Age: {age}
+Height: {height} cm
+Body Shape: {body_shape}
+Skin Tone: {skin_tone}
+
+Category: {category}
+Fabric: {fabric}
+Occasion: {occasion}
+Theme: {theme}
+Complexity: {complexity}
+
+Country:
+{country}
+
+Climate:
+{climate}
+
+Preferred Colors:
+{", ".join(colors) if colors else "Designer Choice"}
+
+Embroidery:
+{"Include sophisticated embroidery." if embroidery else "No mandatory embroidery."}
+
+Create a full-body professional fashion presentation.
+
+The garment should have:
+
+- Accurate garment construction
+- Elegant proportions
+- Detailed fabric texture
+- Sophisticated styling
+- Luxury fashion quality
+- Editorial presentation
+- Clean composition
+- Professional pose
+- Full garment visibility
+- Premium fashion illustration quality
+
+The garment must remain the main focus.
+"""
+
+                    # ----------------------------------------
+                    # IMAGE
+                    # ----------------------------------------
+
+                    st.divider()
+
+                    st.subheader(
+                        "🎨 AI Fashion Visualization"
+                    )
+
+                    image = None
+
+                    # ========================================================
+                    # GENERATE IMAGE
+                    # ========================================================
+
+                    image = None
+
+                    with st.spinner(
+                        "🎨 StyleSense AI is generating your fashion visualization..."
+                    ):
+
+                        try:
+
+                            image = generate_image(
+                                image_prompt
+                            )
+
+                            if image:
+
+                                st.success(
+                                    "✨ Your AI fashion design is ready!"
+                                )
+
+                                st.session_state.current_image = image
+
+                                st.session_state.advanced_image = image
+
+                                st.image(
+                                    image,
+                                    use_container_width=True
+                                )
+
+                            else:
+
+                                st.warning(
+                                    "⚠️ No image was generated."
+                                )
+
+                        except Exception as e:
+
+                            st.error(
+                                "❌ AI design generation failed."
+                            )
+
+                            st.caption(
+                                str(e)
+                            )
+
+                    # ----------------------------------------
+                    # ACCESSORIES
+                    # ----------------------------------------
+
+                    if accessories:
+
+                        st.divider()
+
+                        st.subheader(
+                            "👠 Recommended Accessories"
+                        )
+
+                        st.success(
+                            """
+• Luxury Wrist Watch
+
+• Premium Leather Bag
+
+• Sunglasses
+
+• Gold Jewelry
+
+• Matching Belt
+
+• Designer Shoes
+"""
+                        )
+
+                    # ----------------------------------------
+                    # PRODUCTION
+                    # ----------------------------------------
+
+                    st.divider()
+
+                    st.subheader(
+                        "🧵 Production Recommendation"
+                    )
+
+                    st.info(
+                        f"""
+**Recommended Fabric:** {fabric}
+
+**Recommended Market:** Luxury Fashion
+
+**Estimated Completion:** 5–10 Days
+
+**Quality Level:** Premium
+"""
+                    )
+
+                    # ----------------------------------------
+                    # SELLING PRICE
+                    # ----------------------------------------
+
+                    st.divider()
+
+                    st.subheader(
+                        "💰 Suggested Selling Price"
+                    )
+
+                    prices = {
+                        "Simple":
+                            "₦50,000 – ₦120,000",
+
+                        "Moderate":
+                            "₦120,000 – ₦300,000",
+
+                        "Luxury":
+                            "₦300,000 – ₦1,000,000+"
+                    }
+
+                    st.success(
+                        prices.get(
+                            complexity,
+                            "Contact designer"
+                        )
+                    )
+
+                    # ----------------------------------------
+                    # MARKETING
+                    # ----------------------------------------
+
+                    st.divider()
+
+                    st.subheader(
+                        "📣 Marketing Caption"
+                    )
+
+                    caption = f"""
+Introducing our latest {category.lower()} collection.
+
+Designed for {occasion.lower()}.
+
+Crafted from premium {fabric.lower()}.
+
+Luxury.
+Elegance.
+Confidence.
+
+Powered by StyleSense AI OS.
+"""
+
+                    st.code(
+                        caption
+                    )
+
+                    # ----------------------------------------
+                    # SAVE
+                    # ----------------------------------------
+
+                    design_id = save_design(
+                        {
+                            "design": result,
+                            "image": image,
+
+                            "mode":
+                                "Guided Design",
+
+                            "gender": gender,
+                            "age": age,
+                            "height": height,
+                            "body_shape": body_shape,
+                            "skin_tone": skin_tone,
+
+                            "category": category,
+                            "fabric": fabric,
+                            "colors": colors,
+
+                            "occasion": occasion,
+                            "budget": budget,
+                            "complexity": complexity,
+                            "theme": theme,
+
+                            "country": country,
+                            "climate": climate,
+
+                            "embroidery": embroidery,
+                            "accessories": accessories,
+
+                            "created_at":
+                                datetime.now().strftime(
+                                    "%Y-%m-%d %H:%M"
+                                )
+                        }
+                    )
+
+                    st.success(
+                        f"💾 Design #{design_id} saved to your Design Library."
+                    )
+
+                    # ----------------------------------------
+                    # TAILORING
+                    # ----------------------------------------
+
+                    st.divider()
+
+                    st.subheader(
+                        "✂ Tailoring Instructions"
+                    )
+
+                    tailoring = f"""
+Pattern Type:
+Custom {category}
+
+Fit:
+{body_shape}
+
+Fabric:
+{fabric}
+
+Complexity:
+{complexity}
+
+Recommended Seam:
+Double stitched
+
+Recommended Lining:
+Premium lining
+
+Recommended Thread:
+Matching premium polyester thread
+
+Estimated Tailoring Time:
+5–10 working days
+"""
+
+                    st.text_area(
+                        "Tailor Notes",
+                        tailoring,
+                        height=220,
+                        key="guided_tailor_notes"
+                    )
+
+                    # ----------------------------------------
+                    # COST
+                    # ----------------------------------------
+
+                    st.divider()
+
+                    st.subheader(
+                        "💰 Production Cost Estimate"
+                    )
+
+                    costs = {
+
+                        "Simple": {
+                            "Fabric": 25000,
+                            "Labour": 15000,
+                            "Accessories": 10000
+                        },
+
+                        "Moderate": {
+                            "Fabric": 50000,
+                            "Labour": 30000,
+                            "Accessories": 25000
+                        },
+
+                        "Luxury": {
+                            "Fabric": 120000,
+                            "Labour": 90000,
+                            "Accessories": 60000
+                        }
+                    }
+
+                    estimate = costs[
+                        complexity
+                    ]
+
+                    total = (
+                        estimate["Fabric"]
+                        + estimate["Labour"]
+                        + estimate["Accessories"]
+                    )
+
+                    profit = int(
+                        total * 0.5
+                    )
+
+                    selling_price = (
+                        total + profit
+                    )
+
+                    c1, c2, c3 = st.columns(3)
+
+                    c1.metric(
+                        "Production Cost",
+                        f"₦{total:,}"
+                    )
+
+                    c2.metric(
+                        "Estimated Profit",
+                        f"₦{profit:,}"
+                    )
+
+                    c3.metric(
+                        "Suggested Price",
+                        f"₦{selling_price:,}"
+                    )
+
+                    # ----------------------------------------
+                    # PACKAGING
+                    # ----------------------------------------
+
+                    st.divider()
+
+                    st.subheader(
+                        "📦 Packaging Recommendation"
+                    )
+
+                    st.success(
+                        f"""
+• Premium Gift Box
+• Brand Sticker
+• Thank You Card
+• Care Instruction Card
+• Luxury Shopping Bag
+
+Suitable for a {complexity.lower()} collection.
+"""
+                    )
+
+                    # ----------------------------------------
+                    # PHOTOSHOOT
+                    # ----------------------------------------
+
+                    st.divider()
+
+                    st.subheader(
+                        "📸 Photoshoot Ideas"
+                    )
+
+                    st.info(
+                        f"""
+**Location:** Luxury hotel or professional studio.
+
+**Theme:** {theme}
+
+**Lighting:** Soft luxury lighting.
+
+**Pose:** Editorial fashion pose.
+
+**Background:** Minimal white or premium marble.
+"""
+                    )
+
+                    # ----------------------------------------
+                    # ADVERTISEMENT
+                    # ----------------------------------------
+
+                    st.divider()
+
+                    st.subheader(
+                        "📱 Instagram Advertisement"
+                    )
+
+                    advert = f"""
+✨ NEW COLLECTION ✨
+
+Introducing our exclusive {category} collection.
+
+✔ Premium {fabric}
+✔ {theme}
+✔ Designed for {occasion}
+
+Available now.
+
+#Fashion
+#Luxury
+#StyleSense
+#Designer
+"""
+
+                    st.code(
+                        advert
+                    )
+
+                    # ----------------------------------------
+                    # BRAND NAMES
+                    # ----------------------------------------
+
+                    st.divider()
+
+                    st.subheader(
+                        "🏷 AI Brand Name Suggestions"
+                    )
+
+                    names = [
+                        "Royal Threads",
+                        "Elite Couture",
+                        "Imperial Stitch",
+                        "Luxora Fashion",
+                        "Heritage Wear",
+                        "StyleSense Signature"
+                    ]
+
+                    cols = st.columns(2)
+
+                    for index, name in enumerate(
+                        names
+                    ):
+
+                        with cols[
+                            index % 2
+                        ]:
+
+                            st.success(
+                                name
+                            )
+
+                    # ----------------------------------------
+                    # INSIGHTS
+                    # ----------------------------------------
+
+                    st.divider()
+
+                    st.subheader(
+                        "📈 AI Fashion Insights"
+                    )
+
+                    insight1, insight2 = st.columns(2)
+
+                    with insight1:
+
+                        st.info(
+                            f"""
+### 🎯 Target Audience
+
+**Age:** {age}
+
+**Gender:** {gender}
+
+**Region:** {country}
+
+**Category:** {category}
+
+**Income:** Middle to High Class
+
+**Fashion Taste:** Premium Luxury
+"""
+                        )
+
+                    with insight2:
+
+                        st.success(
+                            """
+### 🔥 Market Opportunity
+
+Demand:
+★★★★★
+
+Competition:
+★★★☆☆
+
+Luxury Appeal:
+★★★★★
+
+Commercial Potential:
+★★★★★
+
+Brand Value:
+Excellent
+"""
+                        )
+
+                    # ----------------------------------------
+                    # COLOR PALETTE
+                    # ----------------------------------------
+
+                    st.divider()
+
+                    st.subheader(
+                        "🎨 Recommended Color Palette"
+                    )
+
+                    recommended = colors
+
+                    if not recommended:
+
+                        recommended = [
+                            "Black",
+                            "Gold",
+                            "White",
+                            "Wine",
+                            "Royal Blue",
+                            "Cream"
+                        ]
+
+                    palette = st.columns(
+                        min(
+                            6,
+                            len(
+                                recommended
+                            )
+                        )
+                    )
+
+                    for index, colour in enumerate(
+                        recommended[:6]
+                    ):
+
+                        palette[
+                            index
+                        ].success(
+                            colour
+                        )
+
+                    # ----------------------------------------
+                    # CHECKLIST
+                    # ----------------------------------------
+
+                    st.divider()
+
+                    st.subheader(
+                        "✅ Fashion Production Checklist"
+                    )
+
+                    st.checkbox(
+                        "Design Completed",
+                        value=True,
+                        disabled=True,
+                        key="guided_check_design"
+                    )
+
+                    st.checkbox(
+                        "Fabric Selected",
+                        value=True,
+                        disabled=True,
+                        key="guided_check_fabric"
+                    )
+
+                    st.checkbox(
+                        "Accessories Recommended",
+                        value=accessories,
+                        disabled=True,
+                        key="guided_check_accessories"
+                    )
+
+                    st.checkbox(
+                        "AI Sketch Generated",
+                        value=image is not None,
+                        disabled=True,
+                        key="guided_check_image"
+                    )
+
+                    # ----------------------------------------
+                    # RECOMMENDATIONS
+                    # ----------------------------------------
+
+                    st.divider()
+
+                    st.subheader(
+                        "🤖 AI Recommendations"
+                    )
+
+                    recommendations = [
+                        "Increase embroidery for premium appeal.",
+                        "Use luxury photography for marketing.",
+                        "Offer limited-edition releases.",
+                        "Target Instagram and TikTok first.",
+                        "Bundle matching accessories."
+                    ]
+
+                    for recommendation in recommendations:
+
+                        st.success(
+                            recommendation
+                        )
+
+                except Exception as e:
+
+                    st.error(
+                        "Fashion design generation failed."
+                    )
+
+                    st.exception(
+                        e
+                    )
+
+    # ========================================================
+    # TAB 2 — PROMPT STUDIO
+    # ========================================================
+
+    with tab2:
+
+        st.subheader(
+            "✨ Prompt Studio"
+        )
+
+        st.caption(
+            "Create professional fashion concepts using natural language."
+        )
+
+        # ====================================================
+        # AI SETTINGS
+        # ====================================================
+
+        st.divider()
+
+        st.subheader(
+            "🧠 AI Settings"
+        )
 
         ai_creativity = st.slider(
             "AI Creativity",
@@ -297,42 +1531,39 @@ def render_design_studio():
         )
 
         st.info(
-            """
-Higher creativity produces more artistic,
-experimental and unconventional fashion concepts.
-"""
+            "Higher creativity produces more artistic and experimental concepts."
         )
 
         st.success(
-            "OpenAI Image Generation Enabled"
+            "🟢 OpenAI Image Generation Enabled"
         )
 
-        # ========================================================
-        # PROMPT-TO-DESIGN
-        # ========================================================
+        # ====================================================
+        # EXAMPLES
+        # ====================================================
 
         st.divider()
 
-        st.subheader("🚀 Prompt-to-Design")
-
-        st.write(
-            "Describe the fashion design you want in your own words. "
-            "You do not need to complete the Design tab."
+        st.subheader(
+            "💡 Start With an Example"
         )
 
         prompt_examples = [
+
             "Create a luxurious emerald green evening gown with an asymmetric neckline, sculptural sleeves, subtle gold embroidery and a fitted silhouette. Make it elegant and sophisticated.",
+
             "Design a modern Nigerian agbada for a young entrepreneur using deep wine velvet, gold embroidery and a clean luxury silhouette.",
+
             "Create a futuristic streetwear outfit inspired by African architecture, using black technical fabric with silver details and an oversized silhouette.",
+
             "Design an elegant Aso Oke bridal outfit combining traditional Nigerian heritage with modern haute couture."
         ]
 
         example_choice = st.selectbox(
-            "💡 Example Prompts",
+            "Example Prompts",
             [
-                "Choose an example...",
-                *prompt_examples
-            ],
+                "Choose an example..."
+            ] + prompt_examples,
             key="advanced_example_prompt"
         )
 
@@ -343,9 +1574,34 @@ experimental and unconventional fashion concepts.
                 key="use_example_prompt"
             ):
 
-                st.session_state.advanced_prompt = example_choice
+                st.session_state.advanced_prompt = (
+                    example_choice
+                )
 
                 st.rerun()
+
+        # ====================================================
+        # DASHBOARD PROMPT
+        # ====================================================
+
+        if (
+            st.session_state.get(
+                "dashboard_ai_prompt"
+            )
+            and not st.session_state.get(
+                "advanced_prompt"
+            )
+        ):
+
+            st.session_state.advanced_prompt = (
+                st.session_state.dashboard_ai_prompt
+            )
+
+            st.session_state.dashboard_ai_prompt = ""
+
+        # ====================================================
+        # PROMPT
+        # ====================================================
 
         prompt = st.text_area(
             "Describe Your Fashion Design",
@@ -360,20 +1616,18 @@ experimental and unconventional fashion concepts.
         )
 
         st.caption(
-            "Describe the garment, fabric, colour, silhouette, "
-            "occasion, cultural inspiration, mood, details and target customer."
+            "Describe the garment, fabric, colour, silhouette, occasion, "
+            "cultural inspiration, mood and target customer."
         )
 
-        # ========================================================
-        # OPTIONAL DESIGN CONTROLS
-        # ========================================================
+        # ====================================================
+        # OPTIONAL CONTROLS
+        # ====================================================
 
         st.divider()
 
-        st.subheader("🎯 Optional Design Controls")
-
-        st.caption(
-            "These controls are optional. Your prompt remains the main instruction."
+        st.subheader(
+            "🎯 Optional Design Controls"
         )
 
         advanced_col1, advanced_col2 = st.columns(2)
@@ -496,16 +1750,14 @@ experimental and unconventional fashion concepts.
             key="advanced_full_body"
         )
 
-        # ========================================================
-        # AI PROMPT ENHANCEMENT
-        # ========================================================
+        # ====================================================
+        # PROMPT ENHANCEMENT
+        # ====================================================
 
         st.divider()
 
-        st.subheader("✨ AI Prompt Enhancement")
-
-        st.caption(
-            "Turn a simple idea into a detailed professional fashion prompt."
+        st.subheader(
+            "✨ AI Prompt Enhancement"
         )
 
         if st.button(
@@ -529,8 +1781,6 @@ fashion design generation prompt.
 Original idea:
 {prompt}
 
-Optional design direction:
-
 Design Style:
 {advanced_style}
 
@@ -552,7 +1802,7 @@ Cultural Inspiration:
 Embroidery:
 {"Yes" if advanced_embroidery else "Designer choice"}
 
-The final concept should clearly describe:
+Describe:
 
 - Garment type
 - Silhouette
@@ -564,13 +1814,13 @@ The final concept should clearly describe:
 - Sleeves
 - Length
 - Embellishment
-- Cultural details where appropriate
+- Cultural details
 - Overall aesthetic
-- Luxury and fashion quality
-- Professional fashion presentation
+- Fashion quality
+- Professional presentation
 
 Do not change the user's core idea.
-Improve it while preserving the original creative direction.
+Improve the idea while preserving its creative direction.
 """
 
                 st.session_state.advanced_enhanced_prompt = (
@@ -578,7 +1828,7 @@ Improve it while preserving the original creative direction.
                 )
 
                 st.success(
-                    "✨ Prompt enhanced successfully!"
+                    "✨ Prompt enhanced successfully."
                 )
 
         if st.session_state.advanced_enhanced_prompt:
@@ -590,14 +1840,14 @@ Improve it while preserving the original creative direction.
                 key="display_enhanced_prompt"
             )
 
-        # ========================================================
-        # GENERATE PROMPT DESIGN
-        # ========================================================
+        # ====================================================
+        # GENERATE
+        # ====================================================
 
         st.divider()
 
         if st.button(
-            "🎨 Generate Design",
+            "🎨 Generate AI Design",
             use_container_width=True,
             type="primary",
             key="generate_advanced_design"
@@ -606,7 +1856,7 @@ Improve it while preserving the original creative direction.
             if not prompt.strip():
 
                 st.warning(
-                    "Please describe the fashion design you want to create."
+                    "Please describe the fashion design you want."
                 )
 
             else:
@@ -618,155 +1868,186 @@ Improve it while preserving the original creative direction.
                 )
 
                 image_prompt = f"""
-Create a professional luxury fashion design based on this creative direction:
+        Create a professional luxury fashion design.
 
-{final_prompt}
+        Creative Direction:
+        {final_prompt}
 
-Additional Style Direction:
+        Design Style:
+        {advanced_style}
 
-Design Style:
-{advanced_style}
+        Fabric:
+        {advanced_fabric}
 
-Preferred Fabric:
-{advanced_fabric}
+        Colour:
+        {advanced_colour}
 
-Preferred Colour:
-{advanced_colour}
+        Occasion:
+        {advanced_occasion}
 
-Occasion:
-{advanced_occasion}
+        Target Market:
+        {advanced_market}
 
-Target Market:
-{advanced_market}
+        Cultural Inspiration:
+        {advanced_culture}
 
-Cultural Inspiration:
-{advanced_culture}
+        Embroidery:
+        {"Include sophisticated embroidery." if advanced_embroidery else "Use embellishment only when appropriate."}
 
-Embroidery / Embellishment:
-{"Include sophisticated embroidery or embellishment." if advanced_embroidery else "Use embellishment only if appropriate."}
+        Presentation:
+        {"Full body fashion presentation." if advanced_full_body else "Professional fashion presentation."}
 
-Presentation:
-{"Full body fashion presentation." if advanced_full_body else "Professional fashion presentation."}
+        Requirements:
 
-Requirements:
+        - Professional fashion design
+        - High-end fashion illustration
+        - Strong garment construction
+        - Accurate silhouette
+        - Sophisticated proportions
+        - Detailed fabric texture
+        - Realistic garment details
+        - Elegant styling
+        - Professional fashion pose
+        - Clean composition
+        - Premium editorial quality
+        - Highly detailed
 
-- Professional fashion design
-- High-end fashion illustration
-- Strong garment construction
-- Accurate silhouette
-- Sophisticated proportions
-- Detailed fabric texture
-- Realistic garment details
-- Elegant styling
-- Professional fashion pose
-- Clean composition
-- Premium fashion editorial quality
-- Highly detailed
-- 4K quality
+        The garment must remain the primary focus.
+        """
 
-The garment must remain the primary focus.
-"""
+                # ====================================================
+                # IMAGE GENERATION
+                # ====================================================
 
-                with st.spinner(
-                    "🧠 StyleSense AI is creating your fashion design..."
-                ):
+                st.subheader(
+                    "🎨 AI Fashion Visualization"
+                )
 
-                    try:
+                try:
+
+                    with st.spinner(
+                        "🎨 StyleSense AI is generating your fashion design..."
+                    ):
 
                         image = generate_image(
                             image_prompt
                         )
 
-                        st.session_state.advanced_image = image
-
-                        st.session_state.current_design = prompt
-
-                        # Save generated design to library data
-                        st.session_state.saved_designs.append(
-                            {
-                                "design": prompt,
-                                "image": image,
-                                "mode": "Advanced Prompt-to-Design",
-
-                                "style": advanced_style,
-                                "fabric": advanced_fabric,
-                                "colour": advanced_colour,
-                                "occasion": advanced_occasion,
-                                "market": advanced_market,
-                                "culture": advanced_culture,
-
-                                "created_at": datetime.now().strftime(
-                                    "%Y-%m-%d %H:%M"
-                                )
-                            }
-                        )
+                    if image:
 
                         st.success(
-                            "✅ Design generated successfully!"
+                            "✨ Your AI fashion design is ready!"
                         )
+
+                        # ====================================================
+                        # STORE CURRENT IMAGE
+                        # ====================================================
+
+                        st.session_state.advanced_image = image
+                        st.session_state.current_image = image
 
                         st.image(
                             image,
                             use_container_width=True
                         )
 
-                        st.info(
-                            "💾 Your design is now available in 📂 Design Library."
+                        # ====================================================
+                        # SAVE DESIGN
+                        # ====================================================
+
+                        design_id = save_design(
+                            {
+                                "design": prompt,
+
+                                "image": image,
+
+                                "mode": "Advanced Prompt-to-Design",
+
+                                "style": advanced_style,
+                                "fabric": advanced_fabric,
+                                "colour": advanced_colour,
+
+                                "occasion": advanced_occasion,
+                                "market": advanced_market,
+
+                                "culture": advanced_culture,
+
+                                "embroidery": advanced_embroidery,
+
+                                "full_body": advanced_full_body,
+
+                                "created_at":
+                                    datetime.now().strftime(
+                                        "%Y-%m-%d %H:%M"
+                                    )
+                            }
                         )
 
-                    except Exception as e:
+                        # ====================================================
+                        # UPDATE SESSION STATE
+                        # ====================================================
 
-                        st.error(
-                            f"Advanced design generation failed.\n\n{e}"
+                        st.session_state.saved_designs.append(
+                            {
+                                "id": design_id,
+                                "design": prompt,
+                                "image": image,
+                                "mode": "Advanced Prompt-to-Design",
+                                "created_at":
+                                    datetime.now().strftime(
+                                        "%Y-%m-%d %H:%M"
+                                    )
+                            }
                         )
 
-        # ============================================================
-        # REFERENCE IMAGE → DESIGN
-        # ============================================================
+                        st.success(
+                            f"💾 Design #{design_id} saved to your Design Library."
+                        )
 
-        st.divider()
+                except Exception as e:
+
+                    st.error(
+                        "❌ AI design generation failed."
+                    )
+
+                    st.caption(
+                        str(e)
+                    )
+
+    # ========================================================
+    # TAB 3 — REFERENCE DESIGN
+    # ========================================================
+
+    with tab3:
 
         st.subheader(
-            "🖼️ Reference Image → Design"
+            "🖼 Reference → AI Design"
         )
 
         st.caption(
             "Transform a fashion inspiration, sketch, garment photo "
-            "or your own reference image into a new AI fashion design."
+            "or your own image into a new AI fashion concept."
         )
 
-
-        # ============================================================
-        # PEXELS IMAGE FROM FASHION INSPIRATION
-        # ============================================================
-
-        studio_reference_url = (
-            st.session_state.get(
-                "studio_reference_image_url"
-            )
-        )
+        # ====================================================
+        # PEXELS REFERENCE
+        # ====================================================
 
         if studio_reference_url:
 
             st.success(
-                "✨ Fashion Inspiration loaded from Fashion Inspiration."
+                "✨ Fashion Inspiration loaded."
             )
 
             st.image(
                 studio_reference_url,
-                caption=st.session_state.get(
-                    "studio_reference_title",
-                    "Fashion Inspiration"
-                ),
+                caption=studio_reference_title,
                 use_container_width=True
             )
 
             st.caption(
                 "📸 Original inspiration by "
-                + st.session_state.get(
-                    "studio_reference_photographer",
-                    "Pexels"
-                )
+                + studio_reference_photographer
             )
 
             if st.button(
@@ -782,13 +2063,12 @@ The garment must remain the primary focus.
 
                 st.rerun()
 
-
-        # ============================================================
-        # OWN UPLOADED IMAGE
-        # ============================================================
+        # ====================================================
+        # UPLOAD
+        # ====================================================
 
         reference_image = st.file_uploader(
-            "Or Upload Your Own Reference Image",
+            "Upload Your Own Reference Image",
             type=[
                 "png",
                 "jpg",
@@ -798,11 +2078,10 @@ The garment must remain the primary focus.
             key="advanced_reference_image"
         )
 
-
         if reference_image:
 
             st.success(
-                "✅ Your reference image is ready."
+                "✅ Reference image ready."
             )
 
             st.image(
@@ -811,44 +2090,32 @@ The garment must remain the primary focus.
                 use_container_width=True
             )
 
-
-        # ============================================================
-        # TRANSFORMATION INSTRUCTION
-        # ============================================================
+        # ====================================================
+        # TRANSFORMATION PROMPT
+        # ====================================================
 
         st.divider()
 
-        st.subheader(
-            "✍️ What should StyleSense do with it?"
-        )
-
         reference_prompt = st.text_area(
-            "Describe the transformation",
+            "✍️ What should StyleSense do with it?",
             height=160,
             placeholder=(
-                "Example: Keep the silhouette of this dress "
-                "but transform it into a luxury Nigerian evening gown. "
+                "Example: Keep the silhouette of this dress but "
+                "transform it into a luxury Nigerian evening gown. "
                 "Use emerald green velvet, subtle gold embroidery, "
                 "structured shoulders and a sophisticated couture finish."
             ),
             key="reference_design_prompt"
         )
 
-        st.caption(
-            "You can ask StyleSense to preserve the silhouette, "
-            "change the fabric, change colours, add details, "
-            "change cultural inspiration or completely redesign it."
-        )
-
-
-        # ============================================================
-        # TRANSFORMATION CONTROLS
-        # ============================================================
+        # ====================================================
+        # CONTROLS
+        # ====================================================
 
         st.divider()
 
         st.subheader(
-            "🎯 Reference Transformation"
+            "🎯 Transformation Controls"
         )
 
         ref_col1, ref_col2 = st.columns(2)
@@ -873,7 +2140,6 @@ The garment must remain the primary focus.
                 key="reference_change_colour"
             )
 
-
         with ref_col2:
 
             change_style = st.checkbox(
@@ -894,10 +2160,9 @@ The garment must remain the primary focus.
                 key="reference_professional_presentation"
             )
 
-
-        # ============================================================
+        # ====================================================
         # PREPARE REFERENCE
-        # ============================================================
+        # ====================================================
 
         reference_source = reference_image
 
@@ -942,15 +2207,14 @@ The garment must remain the primary focus.
 
                 reference_source = None
 
-
-        # ============================================================
+        # ====================================================
         # GENERATE
-        # ============================================================
+        # ====================================================
 
         st.divider()
 
         if st.button(
-            "🎨 Generate From Reference Image",
+            "🎨 Generate From Reference",
             use_container_width=True,
             type="primary",
             key="generate_reference_design"
@@ -959,341 +2223,24 @@ The garment must remain the primary focus.
             if reference_source is None:
 
                 st.warning(
-                    "Please upload a reference image "
-                    "or select a Pexels inspiration."
+                    "Please upload an image or select a Fashion Inspiration."
                 )
 
             elif not reference_prompt.strip():
 
                 st.warning(
-                    "Please describe what you want "
-                    "StyleSense to create."
+                    "Please describe the transformation you want."
                 )
 
             else:
 
                 transformation_instructions = f"""
-        You are an expert fashion designer
-        and fashion visual director.
-
-        Use the uploaded reference image
-        as the visual foundation.
-
-        USER'S TRANSFORMATION REQUEST:
-
-        {reference_prompt}
-
-
-        DESIGN RULES:
-
-        Preserve original silhouette:
-
-        {"YES" if preserve_silhouette else "NO"}
-
-
-        Allow fabric transformation:
-
-        {"YES" if change_fabric else "NO"}
-
-
-        Allow colour transformation:
-
-        {"YES" if change_colour else "NO"}
-
-
-        Allow style transformation:
-
-        {"YES" if change_style else "NO"}
-
-
-        Preserve important original details:
-
-        {"YES" if preserve_details else "NO"}
-
-
-        Professional fashion presentation:
-
-        {"YES" if professional_presentation else "NO"}
-
-
-        IMPORTANT:
-
-        The uploaded image is a reference,
-        not a restriction.
-
-        Follow the user's transformation
-        request carefully.
-
-        If the user requests a new fabric,
-        colour, cultural influence,
-        embellishment or styling,
-        apply those changes while maintaining
-        visual coherence.
-
-        The result should look like a
-        professionally designed fashion concept
-        rather than a simple image filter.
-
-        Create:
-
-        - High-end fashion design
-        - Accurate garment construction
-        - Elegant proportions
-        - Detailed fabric texture
-        - Professional styling
-        - Sophisticated fashion presentation
-        - Luxury editorial quality
-        - Full garment visibility
-        - Clean composition
-        - Highly detailed result
-
-        Do not simply copy the reference.
-
-        Create a new fashion concept
-        based on the user's requested transformation.
-        """
-
-                with st.spinner(
-                    "🧠 StyleSense AI is transforming your reference design..."
-                ):
-
-                    try:
-
-                        reference_result = (
-                            generate_image_from_reference(
-                                reference_source,
-                                transformation_instructions
-                            )
-                        )
-
-                        st.success(
-                            "✅ New fashion design created!"
-                        )
-
-                        st.divider()
-
-                        st.subheader(
-                            "🎨 StyleSense Redesigned Concept"
-                        )
-
-                        st.image(
-                            reference_result,
-                            use_container_width=True
-                        )
-
-                        st.divider()
-
-                        st.subheader(
-                            "📝 Transformation Request"
-                        )
-
-                        st.write(
-                            reference_prompt
-                        )
-
-                        st.divider()
-
-                        st.subheader(
-                            "⚙️ Transformation Summary"
-                        )
-
-                        summary_col1, summary_col2 = st.columns(2)
-
-                        with summary_col1:
-
-                            st.info(
-                                f"""
-        **Silhouette Preserved:**
-        {"Yes" if preserve_silhouette else "No"}
-
-        **Fabric Transformation:**
-        {"Yes" if change_fabric else "No"}
-
-        **Colour Transformation:**
-        {"Yes" if change_colour else "No"}
-        """
-                            )
-
-                        with summary_col2:
-
-                            st.info(
-                                f"""
-        **Style Transformation:**
-        {"Yes" if change_style else "No"}
-
-        **Important Details Preserved:**
-        {"Yes" if preserve_details else "No"}
-
-        **Professional Presentation:**
-        {"Yes" if professional_presentation else "No"}
-        """
-                            )
-
-
-                        # ====================================================
-                        # DOWNLOAD GENERATED DESIGN
-                        # ====================================================
-
-                        st.divider()
-
-                        st.subheader(
-                            "📥 Export Design"
-                        )
-
-                        if isinstance(
-                            reference_result,
-                            bytes
-                        ):
-
-                            st.download_button(
-                                "⬇️ Download Generated Design",
-                                data=reference_result,
-                                file_name=(
-                                    "StyleSense_Reference_Design.png"
-                                ),
-                                mime="image/png",
-                                use_container_width=True,
-                                key="download_reference_design"
-                            )
-
-
-                        # ====================================================
-                        # SAVE TO DESIGN LIBRARY
-                        # ====================================================
-
-                        st.session_state.saved_designs.append(
-                            {
-                                "design": reference_prompt,
-
-                                "image": reference_result,
-
-                                "mode": (
-                                    "Reference Image → Design"
-                                ),
-
-                                "reference_image": True,
-
-                                "reference_source": (
-                                    "Pexels"
-                                    if studio_reference_url
-                                    else "Uploaded Image"
-                                ),
-
-                                "preserve_silhouette":
-                                    preserve_silhouette,
-
-                                "change_fabric":
-                                    change_fabric,
-
-                                "change_colour":
-                                    change_colour,
-
-                                "change_style":
-                                    change_style,
-
-                                "preserve_details":
-                                    preserve_details,
-
-                                "created_at":
-                                    datetime.now().strftime(
-                                        "%Y-%m-%d %H:%M"
-                                    )
-                            }
-                        )
-
-                        st.success(
-                            "💾 Design saved to your Design Library."
-                        )
-
-
-                        # ====================================================
-                        # CLEAR PEXELS REFERENCE AFTER GENERATION
-                        # ====================================================
-
-                        st.session_state.studio_reference_image_url = None
-
-                        st.session_state.studio_reference_title = ""
-
-                        st.session_state.studio_reference_photographer = ""
-
-
-                    except Exception as e:
-
-                        st.error(
-                            "Reference image generation failed."
-                        )
-
-                        st.exception(e)
-
-            # ----------------------------------------------------
-            # REFERENCE CONTROLS
-            # ----------------------------------------------------
-
-            ref_col1, ref_col2 = st.columns(2)
-
-            with ref_col1:
-
-                preserve_silhouette = st.checkbox(
-                    "Preserve Original Silhouette",
-                    value=True,
-                    key="preserve_reference_silhouette"
-                )
-
-                change_fabric = st.checkbox(
-                    "Allow Fabric Transformation",
-                    value=True,
-                    key="reference_change_fabric"
-                )
-
-                change_colour = st.checkbox(
-                    "Allow Colour Transformation",
-                    value=True,
-                    key="reference_change_colour"
-                )
-
-            with ref_col2:
-
-                change_style = st.checkbox(
-                    "Allow Style Transformation",
-                    value=True,
-                    key="reference_change_style"
-                )
-
-                preserve_details = st.checkbox(
-                    "Preserve Important Details",
-                    value=True,
-                    key="reference_preserve_details"
-                )
-
-                professional_presentation = st.checkbox(
-                    "Professional Fashion Presentation",
-                    value=True,
-                    key="reference_professional_presentation"
-                )
-
-            st.divider()
-
-            if st.button(
-                "🎨 Generate Outcome",
-                use_container_width=True,
-                type="primary",
-                key="generate_reference_design"
-            ):
-
-                if not reference_prompt.strip():
-
-                    st.warning(
-                        "Please tell StyleSense what you want it to create."
-                    )
-
-                else:
-
-                    transformation_instructions = f"""
-You are an expert fashion designer and fashion visual director.
+You are an expert fashion designer and visual director.
 
 Use the uploaded reference image as the visual foundation.
 
 USER REQUEST:
+
 {reference_prompt}
 
 DESIGN RULES:
@@ -1313,936 +2260,198 @@ Allow style transformation:
 Preserve important details:
 {"YES" if preserve_details else "NO"}
 
-Professional fashion presentation:
+Professional presentation:
 {"YES" if professional_presentation else "NO"}
 
-Follow the user's request carefully.
+The reference is an inspiration,
+not a restriction.
 
-The reference image is a visual starting point.
+Follow the user's transformation request carefully.
 
-Create a professional fashion design with:
+The final result should be a new professional fashion concept.
 
+Create:
+
+- High-end fashion design
 - Accurate garment construction
 - Elegant proportions
 - Detailed fabric texture
 - Professional styling
-- Sophisticated fashion presentation
+- Sophisticated presentation
 - Luxury editorial quality
 - Full garment visibility
 - Clean composition
 - Highly detailed result
+
+Do not simply copy the reference.
+Create a new fashion concept based on the requested transformation.
 """
-
-                    with st.spinner(
-                        "🧠 StyleSense AI is creating your new design..."
-                    ):
-
-                        try:
-
-                            reference_result = (
-                                generate_image_from_reference(
-                                    reference_image,
-                                    transformation_instructions
-                                )
-                            )
-
-                            st.session_state.reference_image_result = (
-                                reference_result
-                            )
-
-                            # Save to library
-                            st.session_state.saved_designs.append(
-                                {
-                                    "design": reference_prompt,
-                                    "image": reference_result,
-
-                                    "mode":
-                                        "Reference Image → Design",
-
-                                    "preserve_silhouette":
-                                        preserve_silhouette,
-
-                                    "change_fabric":
-                                        change_fabric,
-
-                                    "change_colour":
-                                        change_colour,
-
-                                    "change_style":
-                                        change_style,
-
-                                    "preserve_details":
-                                        preserve_details,
-
-                                    "created_at":
-                                        datetime.now().strftime(
-                                            "%Y-%m-%d %H:%M"
-                                        )
-                                }
-                            )
-
-                            st.success(
-                                "✅ New design generated successfully!"
-                            )
-
-                            st.image(
-                                reference_result,
-                                use_container_width=True
-                            )
-
-                            st.info(
-                                "💾 Your design is now available in 📂 Design Library."
-                            )
-
-                        except Exception as e:
-
-                            st.error(
-                                f"Reference image generation failed.\n\n{e}"
-                            )
-
-    # ============================================================
-    # DESIGN LIBRARY
-    # ============================================================
-
-    with tab3:
-
-        st.subheader("📂 Design Library")
-
-        st.caption(
-            "View, download and manage your AI-generated fashion designs."
-        )
-
-        st.divider()
-
-        if not st.session_state.saved_designs:
-
-            st.info(
-                "No designs in your library yet. "
-                "Create a design from the Design or Advanced tab."
-            )
-
-        else:
-
-            for i, design in enumerate(
-                reversed(st.session_state.saved_designs),
-                start=1
-            ):
-
-                mode = design.get(
-                    "mode",
-                    "Guided Design"
-                )
-
-                created_at = design.get(
-                    "created_at",
-                    ""
-                )
-
-                with st.expander(
-                    f"🎨 Design {i} • {mode} • {created_at}"
-                ):
-
-                    # ------------------------------------------------
-                    # IMAGE
-                    # ------------------------------------------------
-
-                    if design.get("image"):
-
-                        st.image(
-                            design["image"],
-                            use_container_width=True
-                        )
-
-                        st.download_button(
-                            "⬇️ Download Design Image",
-                            data=design["image"],
-                            file_name=(
-                                f"StyleSense_Design_{i}.png"
-                            ),
-                            mime="image/png",
-                            use_container_width=True,
-                            key=f"download_image_{i}"
-                        )
-
-                    st.divider()
-
-                    # ------------------------------------------------
-                    # DESIGN DESCRIPTION
-                    # ------------------------------------------------
-
-                    st.subheader("📝 Design Description")
-
-                    st.write(
-                        design.get(
-                            "design",
-                            "No description available."
-                        )
-                    )
-
-                    # ------------------------------------------------
-                    # ADVANCED DESIGN DETAILS
-                    # ------------------------------------------------
-
-                    if mode == "Advanced Prompt-to-Design":
-
-                        st.divider()
-
-                        st.subheader(
-                            "⚙️ Design Details"
-                        )
-
-                        library_col1, library_col2 = st.columns(2)
-
-                        with library_col1:
-
-                            st.write(
-                                f"**Style:** "
-                                f"{design.get('style', 'AI Choice')}"
-                            )
-
-                            st.write(
-                                f"**Fabric:** "
-                                f"{design.get('fabric', 'AI Choice')}"
-                            )
-
-                            st.write(
-                                f"**Colour:** "
-                                f"{design.get('colour', 'AI Choice')}"
-                            )
-
-                        with library_col2:
-
-                            st.write(
-                                f"**Occasion:** "
-                                f"{design.get('occasion', 'AI Choice')}"
-                            )
-
-                            st.write(
-                                f"**Target Market:** "
-                                f"{design.get('market', 'AI Choice')}"
-                            )
-
-                            st.write(
-                                f"**Culture:** "
-                                f"{design.get('culture', 'AI Choice')}"
-                            )
-
-                    # ------------------------------------------------
-                    # REFERENCE DESIGN DETAILS
-                    # ------------------------------------------------
-
-                    if mode == "Reference Image → Design":
-
-                        st.divider()
-
-                        st.subheader(
-                            "🖼️ Reference Transformation"
-                        )
-
-                        ref_library_col1, ref_library_col2 = (
-                            st.columns(2)
-                        )
-
-                        with ref_library_col1:
-
-                            st.write(
-                                "**Silhouette Preserved:** "
-                                + (
-                                    "Yes"
-                                    if design.get(
-                                        "preserve_silhouette"
-                                    )
-                                    else "No"
-                                )
-                            )
-
-                            st.write(
-                                "**Fabric Transformation:** "
-                                + (
-                                    "Yes"
-                                    if design.get(
-                                        "change_fabric"
-                                    )
-                                    else "No"
-                                )
-                            )
-
-                            st.write(
-                                "**Colour Transformation:** "
-                                + (
-                                    "Yes"
-                                    if design.get(
-                                        "change_colour"
-                                    )
-                                    else "No"
-                                )
-                            )
-
-                        with ref_library_col2:
-
-                            st.write(
-                                "**Style Transformation:** "
-                                + (
-                                    "Yes"
-                                    if design.get(
-                                        "change_style"
-                                    )
-                                    else "No"
-                                )
-                            )
-
-                            st.write(
-                                "**Important Details Preserved:** "
-                                + (
-                                    "Yes"
-                                    if design.get(
-                                        "preserve_details"
-                                    )
-                                    else "No"
-                                )
-                            )
-
-                    # ------------------------------------------------
-                    # PDF REPORT
-                    # ------------------------------------------------
-
-                    st.divider()
-
-                    st.subheader(
-                        "📄 Export"
-                    )
-
-                    report_text = f"""
-StyleSense AI Fashion Design
-
-Design Type:
-{mode}
-
-Created:
-{created_at}
-
-Design Description:
-{design.get("design", "")}
-"""
-
-                    try:
-
-                        library_pdf = create_pdf(
-                            report_text
-                        )
-
-                        with open(
-                            library_pdf,
-                            "rb"
-                        ) as pdf_file:
-
-                            st.download_button(
-                                "📄 Download Design Report",
-                                data=pdf_file.read(),
-                                file_name=(
-                                    f"StyleSense_Design_Report_{i}.pdf"
-                                ),
-                                mime="application/pdf",
-                                use_container_width=True,
-                                key=f"download_pdf_{i}"
-                            )
-
-                    except Exception as e:
-
-                        st.warning(
-                            f"PDF export unavailable: {e}"
-                        )
-
-    # ============================================================
-    # EXISTING GUIDED GENERATION
-    # ============================================================
-
-    st.divider()
-
-    if st.button(
-        "🚀 Generate Luxury Fashion Design",
-        use_container_width=True
-    ):
-
-        with st.spinner(
-            "🧠 AI is designing your fashion concept..."
-        ):
-
-            try:
-
-                result = generate_design(
-                    gender,
-                    age,
-                    height,
-                    body_shape,
-                    skin_tone,
-                    category,
-                    fabric,
-                    occasion,
-                    budget,
-                    colors,
-                    complexity,
-                    theme,
-                    embroidery,
-                    accessories,
-                    ai_creativity,
-                    country,
-                    climate
-                )
-
-                st.session_state.current_design = result
-
-                st.success(
-                    "✅ Design generated successfully!"
-                )
-
-                st.divider()
-
-                st.subheader(
-                    "📝 AI Fashion Concept"
-                )
-
-                st.write(result)
-
-                st.divider()
-
-                image_prompt = f"""
-Professional luxury fashion illustration.
-
-Gender: {gender}
-
-Age: {age}
-
-Height: {height}cm
-
-Body Shape: {body_shape}
-
-Skin Tone: {skin_tone}
-
-Category: {category}
-
-Fabric: {fabric}
-
-Occasion: {occasion}
-
-Theme: {theme}
-
-Style Complexity: {complexity}
-
-Country: {country}
-
-Climate: {climate}
-
-Preferred Colors:
-{", ".join(colors) if colors else "Designer Choice"}
-
-Luxury fashion sketch.
-
-Runway quality.
-
-Elegant pose.
-
-Full body.
-
-White background.
-
-Highly detailed.
-
-Professional fashion illustration.
-
-Fashion concept art.
-
-4K.
-"""
-
-                st.subheader(
-                    "🎨 AI Fashion Sketch"
-                )
 
                 with st.spinner(
-                    "Generating fashion illustration..."
+                    "🧠 StyleSense AI is transforming the reference..."
                 ):
 
                     try:
 
-                        image = generate_image(
-                            image_prompt
+                        reference_result = (
+                            generate_image_from_reference(
+                                reference_source,
+                                transformation_instructions
+                            )
+                        )
+
+                        st.session_state.reference_image_result = (
+                            reference_result
+                        )
+
+                        st.success(
+                            "✅ New fashion design created."
+                        )
+
+                        st.divider()
+
+                        st.subheader(
+                            "🎨 StyleSense Redesigned Concept"
                         )
 
                         st.image(
-                            image,
+                            reference_result,
                             use_container_width=True
                         )
 
+                        # ------------------------------------
+                        # DOWNLOAD
+                        # ------------------------------------
+
+                        image_bytes = get_image_bytes(
+                            reference_result
+                        )
+
+                        if image_bytes:
+
+                            st.download_button(
+                                "⬇️ Download Generated Design",
+                                data=image_bytes,
+                                file_name=(
+                                    "StyleSense_Reference_Design.png"
+                                ),
+                                mime="image/png",
+                                use_container_width=True,
+                                key="download_reference_design"
+                            )
+
+                        # ------------------------------------
+                        # SUMMARY
+                        # ------------------------------------
+
+                        st.divider()
+
+                        st.subheader(
+                            "⚙️ Transformation Summary"
+                        )
+
+                        summary_col1, summary_col2 = st.columns(2)
+
+                        with summary_col1:
+
+                            st.info(
+                                f"""
+**Silhouette Preserved:**
+{"Yes" if preserve_silhouette else "No"}
+
+**Fabric Transformation:**
+{"Yes" if change_fabric else "No"}
+
+**Colour Transformation:**
+{"Yes" if change_colour else "No"}
+"""
+                            )
+
+                        with summary_col2:
+
+                            st.info(
+                                f"""
+**Style Transformation:**
+{"Yes" if change_style else "No"}
+
+**Important Details Preserved:**
+{"Yes" if preserve_details else "No"}
+
+**Professional Presentation:**
+{"Yes" if professional_presentation else "No"}
+"""
+                            )
+
+                        # ------------------------------------
+                        # SAVE
+                        # ------------------------------------
+
+                        design_id = save_design(
+                            {
+                                "design":
+                                    reference_prompt,
+
+                                "image":
+                                    reference_result,
+
+                                "mode":
+                                    "Reference Image → Design",
+
+                                "reference_image":
+                                    True,
+
+                                "reference_source":
+                                    (
+                                        "Pexels"
+                                        if studio_reference_url
+                                        else "Uploaded Image"
+                                    ),
+
+                                "preserve_silhouette":
+                                    preserve_silhouette,
+
+                                "change_fabric":
+                                    change_fabric,
+
+                                "change_colour":
+                                    change_colour,
+
+                                "change_style":
+                                    change_style,
+
+                                "preserve_details":
+                                    preserve_details,
+
+                                "professional_presentation":
+                                    professional_presentation,
+
+                                "created_at":
+                                    datetime.now().strftime(
+                                        "%Y-%m-%d %H:%M"
+                                    )
+                            }
+                        )
+
+                        st.success(
+                            f"💾 Design #{design_id} saved to your Design Library."
+                        )
+
+                        # ------------------------------------
+                        # CLEAR PEXELS REFERENCE
+                        # ------------------------------------
+
+                        st.session_state.studio_reference_image_url = None
+
+                        st.session_state.studio_reference_title = ""
+
+                        st.session_state.studio_reference_photographer = ""
+
                     except Exception as e:
 
-                        image = None
-
-                        st.warning(
-                            f"Image generation failed.\n\n{e}"
+                        st.error(
+                            "Reference image generation failed."
                         )
 
-                st.divider()
-
-                st.subheader(
-                    "👠 Accessories"
-                )
-
-                if accessories:
-
-                    st.success(
-                        """
-• Luxury Wrist Watch
-
-• Premium Leather Bag
-
-• Sunglasses
-
-• Gold Jewelry
-
-• Matching Belt
-
-• Designer Shoes
-"""
-                    )
-
-                st.divider()
-
-                st.subheader(
-                    "🧵 Production Recommendation"
-                )
-
-                st.info(
-                    f"""
-Recommended Fabric:
-{fabric}
-
-Recommended Market:
-Luxury Fashion
-
-Estimated Completion:
-5-10 Days
-
-Quality Level:
-Premium
-"""
-                )
-
-                st.divider()
-
-                st.subheader(
-                    "💰 Suggested Selling Price"
-                )
-
-                prices = {
-                    "Simple": "₦50,000 - ₦120,000",
-                    "Moderate": "₦120,000 - ₦300,000",
-                    "Luxury": "₦300,000 - ₦1,000,000+"
-                }
-
-                st.success(
-                    prices.get(complexity)
-                )
-
-                st.divider()
-
-                st.subheader(
-                    "📣 Marketing Caption"
-                )
-
-                caption = f"""
-Introducing our latest {category.lower()} collection.
-
-Designed for {occasion.lower()}.
-
-Crafted from premium {fabric.lower()}.
-
-Luxury.
-
-Elegance.
-
-Confidence.
-
-Powered by StyleSense AI OS.
-"""
-
-                st.code(caption)
-
-                st.divider()
-
-                # ------------------------------------------------
-                # SAVE GUIDED DESIGN TO LIBRARY
-                # ------------------------------------------------
-
-                st.session_state.saved_designs.append(
-                    {
-                        "design": result,
-                        "image": image,
-
-                        "mode": "Guided Design",
-
-                        "gender": gender,
-                        "age": age,
-                        "height": height,
-                        "body_shape": body_shape,
-                        "skin_tone": skin_tone,
-
-                        "category": category,
-                        "fabric": fabric,
-                        "colors": colors,
-
-                        "occasion": occasion,
-                        "budget": budget,
-                        "complexity": complexity,
-                        "theme": theme,
-
-                        "country": country,
-                        "climate": climate,
-
-                        "embroidery": embroidery,
-                        "accessories": accessories,
-
-                        "created_at": datetime.now().strftime(
-                            "%Y-%m-%d %H:%M"
+                        st.exception(
+                            e
                         )
-                    }
-                )
-
-                st.success(
-                    "💾 Design saved to your Design Library."
-                )
-
-                # ------------------------------------------------
-                # REMAINING EXISTING OUTPUT
-                # ------------------------------------------------
-
-                st.divider()
-
-                st.subheader(
-                    "✂ Tailoring Instructions"
-                )
-
-                tailoring = f"""
-Pattern Type:
-Custom {category}
-
-Fit:
-{body_shape}
-
-Fabric:
-{fabric}
-
-Complexity:
-{complexity}
-
-Recommended Seam:
-Double stitched
-
-Recommended Lining:
-Premium lining
-
-Recommended Thread:
-Matching premium polyester thread
-
-Estimated Tailoring Time:
-5 - 10 working days
-"""
-
-                st.text_area(
-                    "Tailor Notes",
-                    tailoring,
-                    height=220
-                )
-
-                st.divider()
-
-                st.subheader(
-                    "💰 Production Cost Estimate"
-                )
-
-                costs = {
-                    "Simple": {
-                        "Fabric": 25000,
-                        "Labour": 15000,
-                        "Accessories": 10000
-                    },
-                    "Moderate": {
-                        "Fabric": 50000,
-                        "Labour": 30000,
-                        "Accessories": 25000
-                    },
-                    "Luxury": {
-                        "Fabric": 120000,
-                        "Labour": 90000,
-                        "Accessories": 60000
-                    }
-                }
-
-                estimate = costs[complexity]
-
-                total = (
-                    estimate["Fabric"] +
-                    estimate["Labour"] +
-                    estimate["Accessories"]
-                )
-
-                profit = int(total * 0.5)
-
-                selling_price = total + profit
-
-                c1, c2, c3 = st.columns(3)
-
-                c1.metric(
-                    "Production Cost",
-                    f"₦{total:,}"
-                )
-
-                c2.metric(
-                    "Estimated Profit",
-                    f"₦{profit:,}"
-                )
-
-                c3.metric(
-                    "Suggested Price",
-                    f"₦{selling_price:,}"
-                )
-
-                st.divider()
-
-                st.subheader(
-                    "📦 Packaging Recommendation"
-                )
-
-                st.success(
-                    f"""
-• Premium Gift Box
-
-• Brand Sticker
-
-• Thank You Card
-
-• Care Instruction Card
-
-• Luxury Shopping Bag
-
-Suitable for a {complexity.lower()} collection.
-"""
-                )
-
-                st.divider()
-
-                st.subheader(
-                    "📸 Photoshoot Ideas"
-                )
-
-                st.info(
-                    f"""
-Location:
-Luxury hotel or studio.
-
-Theme:
-{theme}
-
-Lighting:
-Soft luxury lighting.
-
-Recommended Pose:
-Editorial fashion pose.
-
-Background:
-Minimal white or premium marble.
-"""
-                )
-
-                st.divider()
-
-                st.subheader(
-                    "📱 Instagram Advertisement"
-                )
-
-                advert = f"""
-✨ NEW COLLECTION ✨
-
-Introducing our exclusive {category} collection.
-
-✔ Premium {fabric}
-
-✔ {theme}
-
-✔ Designed for {occasion}
-
-Available now.
-
-#Fashion
-#Luxury
-#StyleSense
-#Designer
-"""
-
-                st.code(advert)
-
-                st.divider()
-
-                st.subheader(
-                    "🏷 AI Brand Name Suggestions"
-                )
-
-                names = [
-                    "Royal Threads",
-                    "Elite Couture",
-                    "Imperial Stitch",
-                    "Luxora Fashion",
-                    "Heritage Wear",
-                    "StyleSense Signature"
-                ]
-
-                cols = st.columns(2)
-
-                for i, name in enumerate(names):
-
-                    with cols[i % 2]:
-
-                        st.success(name)
-
-                st.divider()
-
-                st.subheader(
-                    "📈 AI Fashion Insights"
-                )
-
-                insight1, insight2 = st.columns(2)
-
-                with insight1:
-
-                    st.info(
-                        f"""
-### 🎯 Target Audience
-
-• Age: {age}
-
-• Gender: {gender}
-
-• Region: {country}
-
-• Fashion Category:
-{category}
-
-• Income:
-Middle to High Class
-
-• Fashion Taste:
-Premium Luxury
-"""
-                    )
-
-                with insight2:
-
-                    st.success(
-                        """
-### 🔥 Market Opportunity
-
-Demand:
-★★★★★
-
-Competition:
-★★★☆☆
-
-Luxury Appeal:
-★★★★★
-
-Commercial Potential:
-★★★★★
-
-Brand Value:
-Excellent
-"""
-                    )
-
-                st.divider()
-
-                st.subheader(
-                    "🎨 Recommended Color Palette"
-                )
-
-                palette = st.columns(6)
-
-                recommended = colors
-
-                if len(recommended) == 0:
-
-                    recommended = [
-                        "Black",
-                        "Gold",
-                        "White",
-                        "Wine",
-                        "Royal Blue",
-                        "Cream"
-                    ]
-
-                for i, colour in enumerate(
-                    recommended[:6]
-                ):
-
-                    palette[i].success(
-                        colour
-                    )
-
-                st.divider()
-
-                st.subheader(
-                    "✅ Fashion Production Checklist"
-                )
-
-                st.checkbox(
-                    "Design Completed",
-                    value=True,
-                    disabled=True
-                )
-
-                st.checkbox(
-                    "Fabric Selected",
-                    value=True,
-                    disabled=True
-                )
-
-                st.checkbox(
-                    "Accessories Recommended",
-                    value=accessories,
-                    disabled=True
-                )
-
-                st.checkbox(
-                    "AI Sketch Generated",
-                    value=image is not None,
-                    disabled=True
-                )
-
-                st.divider()
-
-                st.subheader(
-                    "🤖 AI Recommendations"
-                )
-
-                recommendations = [
-
-                    "Increase embroidery for premium appeal.",
-
-                    "Use luxury photography for marketing.",
-
-                    "Offer limited edition releases.",
-
-                    "Target Instagram and TikTok first.",
-
-                    "Bundle matching accessories."
-
-                ]
-
-                for recommendation in recommendations:
-
-                    st.success(
-                        recommendation
-                    )
-
-            except Exception as e:
-
-                st.error(e)
