@@ -10,8 +10,19 @@ from database.users import (
 )
 
 from views.auth import render_auth
-from views.inventory import render_inventory
+
 from views.production_manager import render_production_manager
+from views.inventory import render_inventory
+from views.measurements import render_measurements
+from views.tech_packs import render_tech_packs
+
+from views.clients import render_clients
+from views.orders import render_orders
+from views.expenses import render_expenses
+from views.pricing import render_pricing
+from views.revenue_profit import render_revenue_profit
+
+from views.help_support import render_help_support
 from views.profiles import render_profiles
 from views.fashion_cofounder import render_fashion_cofounder
 from views.dashboard import render_dashboard
@@ -36,7 +47,18 @@ from views.projects import render_projects
 
 
 # ============================================================
-# STYLESENSE GLOBAL APP + SIDEBAR COLORS
+# PAGE CONFIG
+# ============================================================
+
+st.set_page_config(
+    page_title="StyleSense AI OS",
+    page_icon="👗",
+    layout="wide",
+)
+
+
+# ============================================================
+# STYLESENSE GLOBAL APP + SIDEBAR
 # ============================================================
 
 st.markdown(
@@ -44,7 +66,7 @@ st.markdown(
     <style>
 
     /* ========================================================
-       GLOBAL STYLESENSE BACKGROUND
+       GLOBAL BACKGROUND
        ======================================================== */
 
     .stApp {
@@ -96,7 +118,6 @@ st.markdown(
 
     /* ========================================================
        SIDEBAR
-       DEEP SLATE CHARCOAL + ELECTRIC LIME GREEN
        ======================================================== */
 
     section[data-testid="stSidebar"] {
@@ -111,8 +132,6 @@ st.markdown(
         border-right: 2px solid #39FF14 !important;
     }
 
-
-    /* Sidebar inner area */
 
     section[data-testid="stSidebar"] > div {
         background: transparent !important;
@@ -141,22 +160,25 @@ st.markdown(
     div[data-testid="stButton"] button {
         background: rgba(57, 255, 20, 0.06) !important;
         color: #FFFFFF !important;
-        border: 1px solid rgba(57, 255, 20, 0.15) !important;
-        border-radius: 12px !important;
+        border: 1px solid rgba(57, 255, 20, 0.10) !important;
+        border-radius: 10px !important;
+
+        transition:
+            background 0.15s ease,
+            color 0.15s ease,
+            border 0.15s ease,
+            transform 0.15s ease;
     }
 
 
-    /* ========================================================
-       SIDEBAR BUTTON HOVER
-       ======================================================== */
-
     section[data-testid="stSidebar"]
     div[data-testid="stButton"] button:hover {
-        background: #39FF14 !important;
-        color: #263238 !important;
-        border-color: #39FF14 !important;
+        background: rgba(57, 255, 20, 0.15) !important;
+        color: #FFFFFF !important;
+        border-color: rgba(57, 255, 20, 0.40) !important;
+        transform: translateX(2px);
         box-shadow:
-            0 0 15px rgba(57, 255, 20, 0.30) !important;
+            0 0 12px rgba(57, 255, 20, 0.15) !important;
     }
 
 
@@ -165,7 +187,8 @@ st.markdown(
        ======================================================== */
 
     section[data-testid="stSidebar"] hr {
-        border-color: rgba(57, 255, 20, 0.20) !important;
+        border-color: rgba(57, 255, 20, 0.15) !important;
+        margin: 12px 0 !important;
     }
 
 
@@ -182,19 +205,104 @@ st.markdown(
     }
 
 
+    /* ========================================================
+       SIDEBAR SECTION HEADERS
+       ======================================================== */
+
+    .stylesense-sidebar-section {
+        margin-top: 12px;
+        margin-bottom: 6px;
+        padding: 6px 10px;
+
+        color: #8DFF70 !important;
+
+        font-size: 11px;
+        font-weight: 800;
+
+        letter-spacing: 1.2px;
+        text-transform: uppercase;
+    }
+
+
+    /* ========================================================
+       SIDEBAR SUBSECTION
+       ======================================================== */
+
+    .stylesense-sidebar-subsection {
+        margin-top: 5px;
+        margin-bottom: 4px;
+        padding-left: 8px;
+
+        color: #B8C5C9 !important;
+
+        font-size: 10px;
+        font-weight: 700;
+
+        letter-spacing: 0.8px;
+        text-transform: uppercase;
+    }
+
+
+    /* ========================================================
+       SIDEBAR BRAND
+       ======================================================== */
+
+    .stylesense-brand {
+        font-size: 25px;
+        font-weight: 800;
+        letter-spacing: -0.5px;
+        margin-bottom: 0;
+    }
+
+
+    .stylesense-brand-accent {
+        color: #39FF14;
+    }
+
+
+    .stylesense-tagline {
+        color: #AAB7BB !important;
+        font-size: 11px;
+        margin-top: -4px;
+        margin-bottom: 10px;
+    }
+
+
+    /* ========================================================
+       PROFILE CARD
+       ======================================================== */
+
+    .stylesense-profile-card {
+        background:
+            linear-gradient(
+                135deg,
+                rgba(57, 255, 20, 0.08),
+                rgba(255, 255, 255, 0.03)
+            );
+
+        border: 1px solid rgba(57, 255, 20, 0.16);
+        border-radius: 14px;
+
+        padding: 10px;
+
+        margin-top: 6px;
+        margin-bottom: 8px;
+    }
+
+
+    /* ========================================================
+       ACTIVE NAVIGATION INDICATOR
+       ======================================================== */
+
+    .stylesense-active-label {
+        color: #39FF14 !important;
+        font-weight: 800;
+    }
+
+
     </style>
     """,
     unsafe_allow_html=True,
-)
-
-# ============================================================
-# PAGE CONFIG
-# ============================================================
-
-st.set_page_config(
-    page_title="StyleSense AI OS",
-    page_icon="👗",
-    layout="wide",
 )
 
 
@@ -274,7 +382,7 @@ DEFAULT_SESSION_STATE = {
     "user_avatar_url": "None",
 
     "auth_page": "login",
-    
+
     "main_navigation": "Dashboard",
 
     "open_profile_settings": False,
@@ -308,8 +416,6 @@ DEFAULT_SESSION_STATE = {
     "fashion_news_articles": [],
 
     "fashion_news_generated": False,
-
-    # Fashion Inspiration → Design Studio
 
     "open_design_studio": False,
 
@@ -390,6 +496,7 @@ if design_job_id:
         "status"
     )
 
+
     # --------------------------------------------------------
     # GENERATING
     # --------------------------------------------------------
@@ -399,6 +506,7 @@ if design_job_id:
         st.info(
             "🎨 Your AI fashion design is being generated..."
         )
+
 
     # --------------------------------------------------------
     # COMPLETED
@@ -446,6 +554,7 @@ if design_job_id:
 
         st.session_state.design_generation_job_id = None
 
+
     # --------------------------------------------------------
     # FAILED
     # --------------------------------------------------------
@@ -483,6 +592,10 @@ if design_job_id:
 
 PAGES = {
 
+    # --------------------------------------------------------
+    # WORKSPACE
+    # --------------------------------------------------------
+
     "Dashboard":
         render_dashboard,
 
@@ -494,6 +607,14 @@ PAGES = {
 
     "Design Studio":
         render_design_studio,
+
+    "Design Library":
+        render_design_library,
+
+
+    # --------------------------------------------------------
+    # AI FASHION TOOLS
+    # --------------------------------------------------------
 
     "Fashion Inspiration":
         render_fashion_inspiration,
@@ -516,9 +637,6 @@ PAGES = {
     "Fabric Advisor":
         render_fabric_advisor,
 
-    "Design Library":
-        render_design_library,
-
     "Color Matcher":
         render_color_matcher,
 
@@ -531,20 +649,67 @@ PAGES = {
     "AI Fashion Trends":
         render_fashion_trends,
 
+    "AI Virtual Stylist":
+        render_virtual_stylist,
+
+
+    # --------------------------------------------------------
+    # PRODUCTION
+    # --------------------------------------------------------
+
     "Production Manager":
         render_production_manager,
 
-    "Marketplace":
-        render_marketplace,
+    "Inventory":
+        render_inventory,
+
+    "Measurements":
+        render_measurements,
+
+    "Tech Packs":
+        render_tech_packs,
+
+
+    # --------------------------------------------------------
+    # BUSINESS
+    # --------------------------------------------------------
+
+    "Clients":
+        render_clients,
+
+    "Orders":
+        render_orders,
+
+    "Expenses":
+        render_expenses,
+
+    "Pricing":
+        render_pricing,
+
+    "Revenue & Profit":
+        render_revenue_profit,
+
+
+    # --------------------------------------------------------
+    # COMMUNITY / MARKETPLACE
+    # --------------------------------------------------------
 
     "Fashion Professionals":
         render_profiles,
 
-    "AI Virtual Stylist":
-        render_virtual_stylist,
+    "Marketplace":
+        render_marketplace,
+
+
+    # --------------------------------------------------------
+    # SETTINGS
+    # --------------------------------------------------------
 
     "Settings":
         render_settings,
+
+    "Help & Support":
+        render_help_support,
 }
 
 
@@ -558,11 +723,20 @@ with st.sidebar:
     # BRAND
     # ========================================================
 
-    st.title("✦ StyleSense")
-
-    st.caption(
-        "AI Fashion Operating System"
+    st.markdown(
+        """
+        <div class="stylesense-brand">
+            ✦ Style<span class="stylesense-brand-accent">
+            Sense
+            </span>
+        </div>
+        <div class="stylesense-tagline">
+            AI Fashion Operating System
+        </div>
+        """,
+        unsafe_allow_html=True
     )
+
 
     # ========================================================
     # USER PROFILE
@@ -595,14 +769,21 @@ with st.sidebar:
         else "U"
     )
 
+
     # --------------------------------------------------------
-    # PROFILE CONTAINER
+    # PROFILE CARD
     # --------------------------------------------------------
+
+    st.markdown(
+        '<div class="stylesense-profile-card">',
+        unsafe_allow_html=True
+    )
 
     profile_col1, profile_col2 = st.columns(
         [1, 2.5],
         vertical_alignment="center"
     )
+
 
     # --------------------------------------------------------
     # PROFILE IMAGE
@@ -643,6 +824,7 @@ with st.sidebar:
                 unsafe_allow_html=True
             )
 
+
     # --------------------------------------------------------
     # NAME + PROFESSION
     # --------------------------------------------------------
@@ -657,6 +839,13 @@ with st.sidebar:
             user_profession
         )
 
+
+    st.markdown(
+        '</div>',
+        unsafe_allow_html=True
+    )
+
+
     # --------------------------------------------------------
     # EDIT PROFILE
     # --------------------------------------------------------
@@ -667,73 +856,59 @@ with st.sidebar:
         use_container_width=True,
     ):
 
-        st.session_state.main_navigation = "Settings"
+        st.session_state.main_navigation = (
+            "Settings"
+        )
 
         st.session_state.open_profile_settings = True
 
         st.rerun()
 
+
     # ========================================================
-    # MAIN NAVIGATION
+    # WORKSPACE
     # ========================================================
 
-    st.caption("WORKSPACE")
+    st.markdown(
+        '<div class="stylesense-sidebar-section">'
+        'WORKSPACE'
+        '</div>',
+        unsafe_allow_html=True
+    )
 
-    main_navigation = [
+
+    workspace_navigation = [
 
         ("🏠", "Dashboard"),
 
+        ("📁", "Projects"),
+
         ("🤖", "AI Team"),
 
-        ("✨", "Design Studio"),
-
-        ("📚", "Design Library"),
-
-        ("📸", "Outfit Analyzer"),
-
-        ("🧵", "Fabric Advisor"),
-
-        ("🎨", "Color Matcher"),
-
-        ("💡", "Fashion Inspiration"),
-
-        ("📈", "AI Fashion Trends"),
-
-        ("📰", "Fashion News"),
-
-        ("📰", "Fashion Magazine"),
-
-        ("👔", "Fashion Professionals"),
-
-        ("🛍️", "Marketplace"),
     ]
+
 
     current_page = st.session_state.get(
         "main_navigation",
         "Dashboard"
     )
 
-    for icon, label in main_navigation:
+
+    for icon, label in workspace_navigation:
 
         is_active = (
             current_page == label
         )
 
-        if is_active:
-
-            button_text = (
-                f"● {icon} {label}"
-            )
-
-        else:
-
-            button_text = (
-                f"{icon} {label}"
-            )
+        button_text = (
+            f"● {icon} {label}"
+            if is_active
+            else f"{icon} {label}"
+        )
 
         if st.button(
             button_text,
-            key=f"main_nav_{label}",
+            key=f"workspace_nav_{label}",
             use_container_width=True,
         ):
 
@@ -743,15 +918,276 @@ with st.sidebar:
 
             st.rerun()
 
+
     # ========================================================
-    # AI SHORTCUT
+    # AI DESIGN
+    # ========================================================
+
+    st.markdown(
+        '<div class="stylesense-sidebar-section">'
+        '🎨 AI DESIGN'
+        '</div>',
+        unsafe_allow_html=True
+    )
+
+
+    ai_design_navigation = [
+
+        ("✨", "Design Studio"),
+
+        ("📚", "Design Library"),
+
+        ("✏️", "AI Design Editor"),
+
+        ("💡", "Fashion Inspiration"),
+
+        ("🎨", "Color Matcher"),
+
+        ("🧵", "Fabric Advisor"),
+
+        ("📸", "Outfit Analyzer"),
+
+        ("👗", "AI Virtual Stylist"),
+
+        ("🎨", "Logo Generator"),
+
+    ]
+
+
+    for icon, label in ai_design_navigation:
+
+        is_active = (
+            current_page == label
+        )
+
+        button_text = (
+            f"● {icon} {label}"
+            if is_active
+            else f"{icon} {label}"
+        )
+
+        if st.button(
+            button_text,
+            key=f"ai_design_nav_{label}",
+            use_container_width=True,
+        ):
+
+            st.session_state.main_navigation = (
+                label
+            )
+
+            st.rerun()
+
+
+    # ========================================================
+    # FASHION INTELLIGENCE
+    # ========================================================
+
+    st.markdown(
+        '<div class="stylesense-sidebar-section">'
+        '🧠 FASHION INTELLIGENCE'
+        '</div>',
+        unsafe_allow_html=True
+    )
+
+
+    intelligence_navigation = [
+
+        ("📈", "AI Fashion Trends"),
+
+        ("📰", "Fashion News"),
+
+        ("📰", "Fashion Magazine"),
+
+    ]
+
+
+    for icon, label in intelligence_navigation:
+
+        is_active = (
+            current_page == label
+        )
+
+        button_text = (
+            f"● {icon} {label}"
+            if is_active
+            else f"{icon} {label}"
+        )
+
+        if st.button(
+            button_text,
+            key=f"intelligence_nav_{label}",
+            use_container_width=True,
+        ):
+
+            st.session_state.main_navigation = (
+                label
+            )
+
+            st.rerun()
+
+
+    # ========================================================
+    # PRODUCTION
+    # ========================================================
+
+    st.markdown(
+        '<div class="stylesense-sidebar-section">'
+        '🏭 PRODUCTION'
+        '</div>',
+        unsafe_allow_html=True
+    )
+
+
+    production_navigation = [
+
+        ("🏭", "Production Manager"),
+
+        ("📦", "Inventory"),
+
+        ("📏", "Measurements"),
+
+        ("📋", "Tech Packs"),
+
+    ]
+
+
+    for icon, label in production_navigation:
+
+        is_active = (
+            current_page == label
+        )
+
+        button_text = (
+            f"● {icon} {label}"
+            if is_active
+            else f"{icon} {label}"
+        )
+
+        if st.button(
+            button_text,
+            key=f"production_nav_{label}",
+            use_container_width=True,
+        ):
+
+            st.session_state.main_navigation = (
+                label
+            )
+
+            st.rerun()
+
+
+    # ========================================================
+    # BUSINESS
+    # ========================================================
+
+    st.markdown(
+        '<div class="stylesense-sidebar-section">'
+        '💼 BUSINESS'
+        '</div>',
+        unsafe_allow_html=True
+    )
+
+
+    business_navigation = [
+
+        ("👥", "Clients"),
+
+        ("🛒", "Orders"),
+
+        ("💸", "Expenses"),
+
+        ("💰", "Pricing"),
+
+        ("📊", "Revenue & Profit"),
+
+    ]
+
+
+    for icon, label in business_navigation:
+
+        is_active = (
+            current_page == label
+        )
+
+        button_text = (
+            f"● {icon} {label}"
+            if is_active
+            else f"{icon} {label}"
+        )
+
+        if st.button(
+            button_text,
+            key=f"business_nav_{label}",
+            use_container_width=True,
+        ):
+
+            st.session_state.main_navigation = (
+                label
+            )
+
+            st.rerun()
+
+
+    # ========================================================
+    # FASHION PROFESSIONAL
+    # ========================================================
+
+    st.markdown(
+        '<div class="stylesense-sidebar-section">'
+        '👥 FASHION PROFESSIONAL'
+        '</div>',
+        unsafe_allow_html=True
+    )
+
+
+    professional_navigation = [
+
+        ("👔", "Fashion Professionals"),
+
+        ("🛍️", "Marketplace"),
+
+    ]
+
+
+    for icon, label in professional_navigation:
+
+        is_active = (
+            current_page == label
+        )
+
+        button_text = (
+            f"● {icon} {label}"
+            if is_active
+            else f"{icon} {label}"
+        )
+
+        if st.button(
+            button_text,
+            key=f"professional_nav_{label}",
+            use_container_width=True,
+        ):
+
+            st.session_state.main_navigation = (
+                label
+            )
+
+            st.rerun()
+
+
+    # ========================================================
+    # AI SHORTCUTS
     # ========================================================
 
     st.divider()
 
-    st.caption(
-        "AI SHORTCUT"
+    st.markdown(
+        '<div class="stylesense-sidebar-section">'
+        '⚡ AI SHORTCUTS'
+        '</div>',
+        unsafe_allow_html=True
     )
+
 
     # --------------------------------------------------------
     # ASK STYLESENSE
@@ -769,6 +1205,7 @@ with st.sidebar:
 
         st.rerun()
 
+
     # --------------------------------------------------------
     # AI CO-FOUNDER
     # --------------------------------------------------------
@@ -784,6 +1221,7 @@ with st.sidebar:
         )
 
         st.rerun()
+
 
     # --------------------------------------------------------
     # MY TASKS
@@ -801,6 +1239,7 @@ with st.sidebar:
 
         st.rerun()
 
+
     # --------------------------------------------------------
     # NOTIFICATIONS
     # --------------------------------------------------------
@@ -817,15 +1256,20 @@ with st.sidebar:
 
         st.rerun()
 
+
     # ========================================================
     # SETTINGS
     # ========================================================
 
     st.divider()
 
-    st.caption(
-        "SETTINGS"
+    st.markdown(
+        '<div class="stylesense-sidebar-section">'
+        '⚙️ SYSTEM'
+        '</div>',
+        unsafe_allow_html=True
     )
+
 
     # --------------------------------------------------------
     # SETTINGS
@@ -843,6 +1287,7 @@ with st.sidebar:
 
         st.rerun()
 
+
     # --------------------------------------------------------
     # HELP & SUPPORT
     # --------------------------------------------------------
@@ -859,6 +1304,7 @@ with st.sidebar:
 
         st.rerun()
 
+
     # --------------------------------------------------------
     # LOGOUT
     # --------------------------------------------------------
@@ -869,6 +1315,11 @@ with st.sidebar:
         use_container_width=True,
     ):
 
+        try:
+            logout_user()
+        except Exception:
+            pass
+
         st.session_state.logged_in = False
 
         st.session_state.user_id = None
@@ -876,32 +1327,6 @@ with st.sidebar:
         st.session_state.user_name = None
 
         st.session_state.user_email = None
-
-        st.rerun()
-
-    # ========================================================
-    # UPGRADE TO PRO
-    # ========================================================
-
-    st.divider()
-
-    st.info(
-        "✨ UPGRADE TO PRO\n\n"
-        "Unlock advanced AI tools, "
-        "more generations and "
-        "professional fashion workflows."
-    )
-
-    if st.button(
-        "Upgrade to Pro →",
-        key="upgrade_to_pro",
-        use_container_width=True,
-        type="primary",
-    ):
-
-        st.session_state.main_navigation = (
-            "Settings"
-        )
 
         st.rerun()
 
@@ -946,19 +1371,6 @@ elif current_page == "Notifications":
     )
 
 
-elif current_page == "Help & Support":
-
-    st.title("❓ Help & Support")
-
-    st.caption(
-        "Get help using StyleSense AI OS."
-    )
-
-    st.info(
-        "Help and support tools will be added here."
-    )
-
-
 # ============================================================
 # WORKSPACE
 # ============================================================
@@ -984,26 +1396,6 @@ elif current_page == "Workspace":
 
         render_workspace()
 
-
-# ============================================================
-# PRODUCTION SECTION
-# ============================================================
-
-st.divider()
-
-st.caption("🏭 PRODUCTION")
-
-if st.button(
-    "🏭 Production Manager",
-    key="nav_production_manager",
-    use_container_width=True,
-):
-
-    st.session_state.main_navigation = (
-        "Production Manager"
-    )
-
-    st.rerun()
 
 # ============================================================
 # NORMAL PAGE ROUTING

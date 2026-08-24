@@ -8,6 +8,10 @@ from database.marketplace import (
     get_user_listings,
     update_listing,
     delete_listing,
+    add_listing_images,
+    get_listing_images,
+    delete_listing_image,
+    get_listing_image_count,
     MARKETPLACE_CATEGORIES,
     LISTING_TYPES,
 )
@@ -16,6 +20,9 @@ from database.marketplace import (
 # ============================================================
 # HELPERS
 # ============================================================
+
+MAX_MARKETPLACE_IMAGES = 10
+
 
 def listing_icon(listing_type):
 
@@ -29,6 +36,7 @@ def listing_icon(listing_type):
 
 
 def whatsapp_url(number):
+
     if not number:
         return None
 
@@ -40,25 +48,136 @@ def whatsapp_url(number):
     )
 
     if number.startswith("0"):
-        number = "234" + number[1:]
+        number = (
+            "234"
+            + number[1:]
+        )
 
-    return f"https://wa.me/{number}"
+    return (
+        f"https://wa.me/{number}"
+    )
+
+
+# ============================================================
+# DISPLAY LISTING IMAGES
+# ============================================================
+
+def display_listing_images(
+    listing_id,
+    fallback_image_url="",
+    height=350
+):
+
+    images = get_listing_images(
+        listing_id
+    )
+
+    # --------------------------------------------------------
+    # New uploaded images
+    # --------------------------------------------------------
+
+    if images:
+
+        image_data = [
+            image[2]
+            for image in images
+            if image[2]
+        ]
+
+        if image_data:
+
+            if len(image_data) == 1:
+
+                st.image(
+                    image_data[0],
+                    use_container_width=True
+                )
+
+            else:
+
+                image_cols = st.columns(
+                    min(
+                        len(image_data),
+                        3
+                    )
+                )
+
+                for index, image in enumerate(
+                    image_data
+                ):
+
+                    with image_cols[
+                        index % len(image_cols)
+                    ]:
+
+                        st.image(
+                            image,
+                            use_container_width=True
+                        )
+
+            return
+
+    # --------------------------------------------------------
+    # Legacy URL image
+    # --------------------------------------------------------
+
+    if fallback_image_url:
+
+        st.image(
+            fallback_image_url,
+            use_container_width=True
+        )
+
+        return
+
+    # --------------------------------------------------------
+    # Empty image
+    # --------------------------------------------------------
+
+    st.markdown(
+        f"""
+        <div style="
+            height:{height}px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            background:#f5f5f5;
+            border-radius:15px;
+            font-size:100px;
+        ">
+            📸
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
 
 # ============================================================
 # LISTING DETAILS
 # ============================================================
 
-def render_listing_details(listing_id):
+def render_listing_details(
+    listing_id
+):
 
-    listing = get_listing(listing_id)
+    listing = get_listing(
+        listing_id
+    )
 
     if not listing:
 
-        st.error("Listing not found.")
+        st.error(
+            "Listing not found."
+        )
 
-        if st.button("← Back to Marketplace"):
-            st.session_state.marketplace_view = "explore"
+        if st.button(
+            "← Back to Marketplace"
+        ):
+
+            st.session_state.marketplace_view = (
+                "explore"
+            )
+
             st.rerun()
 
         return
@@ -79,9 +198,14 @@ def render_listing_details(listing_id):
         created_at,
     ) = listing
 
-    if st.button("← Back to Marketplace"):
+    if st.button(
+        "← Back to Marketplace"
+    ):
 
-        st.session_state.marketplace_view = "explore"
+        st.session_state.marketplace_view = (
+            "explore"
+        )
+
         st.rerun()
 
     st.divider()
@@ -90,35 +214,17 @@ def render_listing_details(listing_id):
     # MAIN LISTING
     # ========================================================
 
-    col1, col2 = st.columns([1, 1])
+    col1, col2 = st.columns(
+        [1, 1]
+    )
 
     with col1:
 
-        if image_url:
-
-            st.image(
-                image_url,
-                use_container_width=True
-            )
-
-        else:
-
-            st.markdown(
-                f"""
-                <div style="
-                    height:350px;
-                    display:flex;
-                    align-items:center;
-                    justify-content:center;
-                    background:#f5f5f5;
-                    border-radius:15px;
-                    font-size:100px;
-                ">
-                    {listing_icon(listing_type)}
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
+        display_listing_images(
+            listing_id=listing_id,
+            fallback_image_url=image_url,
+            height=350
+        )
 
     with col2:
 
@@ -142,11 +248,15 @@ def render_listing_details(listing_id):
 
         st.divider()
 
-        st.subheader("About this listing")
+        st.subheader(
+            "About this listing"
+        )
 
         if description:
 
-            st.write(description)
+            st.write(
+                description
+            )
 
         else:
 
@@ -156,7 +266,9 @@ def render_listing_details(listing_id):
 
         st.divider()
 
-        st.subheader("Seller")
+        st.subheader(
+            "Seller"
+        )
 
         st.write(
             f"👤 **{seller_name}**"
@@ -166,19 +278,25 @@ def render_listing_details(listing_id):
         # Contact buttons
         # ----------------------------------------------------
 
-        contact_col1, contact_col2 = st.columns(2)
+        contact_col1, contact_col2 = (
+            st.columns(2)
+        )
 
         with contact_col1:
 
             if whatsapp:
 
-                url = whatsapp_url(whatsapp)
-
-                st.link_button(
-                    "💬 WhatsApp",
-                    url,
-                    use_container_width=True
+                url = whatsapp_url(
+                    whatsapp
                 )
+
+                if url:
+
+                    st.link_button(
+                        "💬 WhatsApp",
+                        url,
+                        use_container_width=True
+                    )
 
         with contact_col2:
 
@@ -199,12 +317,54 @@ def render_listing_details(listing_id):
     st.divider()
 
     # ========================================================
+    # ALL PRODUCT IMAGES
+    # ========================================================
+
+    listing_images = (
+        get_listing_images(
+            listing_id
+        )
+    )
+
+    if len(listing_images) > 1:
+
+        st.subheader(
+            f"📸 Product Photos ({len(listing_images)})"
+        )
+
+        gallery_cols = st.columns(
+            3
+        )
+
+        for index, image_row in enumerate(
+            listing_images
+        ):
+
+            image_data = image_row[2]
+
+            if not image_data:
+                continue
+
+            with gallery_cols[
+                index % 3
+            ]:
+
+                st.image(
+                    image_data,
+                    use_container_width=True
+                )
+
+    # ========================================================
     # SELLER INFORMATION
     # ========================================================
 
-    st.subheader("👤 Seller Information")
+    st.subheader(
+        "👤 Seller Information"
+    )
 
-    seller_col1, seller_col2 = st.columns(2)
+    seller_col1, seller_col2 = (
+        st.columns(2)
+    )
 
     with seller_col1:
 
@@ -231,19 +391,25 @@ def render_listing_details(listing_id):
 
 def render_create_listing():
 
-    if not st.session_state.get("logged_in", False):
+    if not st.session_state.get(
+        "logged_in",
+        False
+    ):
 
         st.warning(
-            "Please login or create an account before creating a marketplace listing."
+            "Please login or create an account "
+            "before creating a marketplace listing."
         )
 
         return
 
-    st.subheader("➕ Create Marketplace Listing")
+    st.subheader(
+        "➕ Create Marketplace Listing"
+    )
 
     st.write(
-        "Sell fashion products or offer fashion-related "
-        "services to customers."
+        "Sell fashion products or offer "
+        "fashion-related services to customers."
     )
 
     st.divider()
@@ -257,8 +423,10 @@ def render_create_listing():
     title = st.text_input(
         "Listing Title",
         placeholder=(
-            "e.g. Premium Ankara Fabric or Custom Tailoring"
-        )
+            "e.g. Premium Ankara Fabric "
+            "or Custom Tailoring"
+        ),
+        key="create_listing_title"
     )
 
     category = st.selectbox(
@@ -269,12 +437,14 @@ def render_create_listing():
 
     seller_name = st.text_input(
         "Business / Seller Name",
-        placeholder="e.g. Chekwube Empire"
+        placeholder="e.g. Chekwube Empire",
+        key="create_listing_seller_name"
     )
 
     location = st.text_input(
         "Location",
-        placeholder="Owerri, Nigeria"
+        placeholder="Owerri, Nigeria",
+        key="create_listing_location"
     )
 
     description = st.text_area(
@@ -283,32 +453,99 @@ def render_create_listing():
             "Describe your product, service, "
             "professional experience, etc."
         ),
-        height=150
+        height=150,
+        key="create_listing_description"
     )
 
     price = st.text_input(
         "Price / Price Range",
-        placeholder="e.g. ₦25,000"
+        placeholder="e.g. ₦25,000",
+        key="create_listing_price"
     )
 
-    st.subheader("📸 Listing Image")
+    # ========================================================
+    # PRODUCT IMAGES
+    # ========================================================
 
-    image_url = st.text_input(
-        "Image URL",
-        placeholder="https://example.com/image.jpg"
+    st.subheader(
+        "📸 Product Images"
     )
+
+    st.caption(
+        "Upload clear photos of your product. "
+        "You can upload up to 10 images."
+    )
+
+    uploaded_images = st.file_uploader(
+        "Choose product images",
+        type=[
+            "jpg",
+            "jpeg",
+            "png",
+            "webp"
+        ],
+        accept_multiple_files=True,
+        key="create_listing_images"
+    )
+
+    if uploaded_images:
+
+        if len(uploaded_images) > MAX_MARKETPLACE_IMAGES:
+
+            st.error(
+                f"You can upload a maximum of "
+                f"{MAX_MARKETPLACE_IMAGES} images."
+            )
+
+        else:
+
+            st.success(
+                f"📸 {len(uploaded_images)} "
+                f"image(s) selected."
+            )
+
+            preview_cols = st.columns(
+                min(
+                    len(uploaded_images),
+                    5
+                )
+            )
+
+            for index, uploaded_file in enumerate(
+                uploaded_images
+            ):
+
+                with preview_cols[
+                    index % len(preview_cols)
+                ]:
+
+                    st.image(
+                        uploaded_file,
+                        caption=(
+                            f"Photo {index + 1}"
+                        ),
+                        use_container_width=True
+                    )
 
     phone = st.text_input(
         "Phone Number",
-        placeholder="08012345678"
+        placeholder="08012345678",
+        key="create_listing_phone"
     )
 
     whatsapp = st.text_input(
         "WhatsApp Number",
-        placeholder="08012345678 or 2348012345678"
+        placeholder=(
+            "08012345678 or 2348012345678"
+        ),
+        key="create_listing_whatsapp"
     )
 
     st.divider()
+
+    # ========================================================
+    # PUBLISH
+    # ========================================================
 
     if st.button(
         "🚀 Publish Listing",
@@ -327,8 +564,8 @@ def render_create_listing():
         if not seller_name.strip():
 
             st.error(
-                "Please enter your business or "
-                "seller name."
+                "Please enter your business "
+                "or seller name."
             )
 
             return
@@ -349,26 +586,67 @@ def render_create_listing():
 
             return
 
-        create_listing(
+        if (
+            uploaded_images
+            and len(uploaded_images)
+            > MAX_MARKETPLACE_IMAGES
+        ):
+
+            st.error(
+                f"Please select no more than "
+                f"{MAX_MARKETPLACE_IMAGES} images."
+            )
+
+            return
+
+        # ----------------------------------------------------
+        # Create listing
+        # ----------------------------------------------------
+
+        listing_id = create_listing(
 
             user_id=st.session_state.user_id,
+
             title=title,
+
             listing_type=listing_type,
+
             category=category,
+
             seller_name=seller_name,
+
             location=location,
+
             description=description,
+
             price=price,
-            image_url=image_url,
+
+            # Kept empty because images are now uploaded.
+            image_url="",
+
             phone=phone,
+
             whatsapp=whatsapp,
         )
+
+        # ----------------------------------------------------
+        # Save uploaded images
+        # ----------------------------------------------------
+
+        if uploaded_images:
+
+            add_listing_images(
+                listing_id=listing_id,
+                uploaded_images=uploaded_images
+            )
 
         st.success(
             "✅ Listing published successfully!"
         )
 
-        st.session_state.marketplace_view = "explore"
+        st.session_state.marketplace_view = (
+            "explore"
+        )
 
         st.rerun()
 
@@ -377,13 +655,34 @@ def render_create_listing():
 # EDIT LISTING
 # ============================================================
 
-def render_edit_listing(listing_id):
+def render_edit_listing(
+    listing_id
+):
 
-    listing = get_listing(listing_id)
+    listing = get_listing(
+        listing_id
+    )
 
     if not listing:
 
-        st.error("Listing not found.")
+        st.error(
+            "Listing not found."
+        )
+
+        return
+
+    # ========================================================
+    # SECURITY CHECK
+    # ========================================================
+
+    if (
+        listing[1]
+        != st.session_state.user_id
+    ):
+
+        st.error(
+            "You are not authorized to edit this listing."
+        )
 
         return
 
@@ -403,70 +702,308 @@ def render_edit_listing(listing_id):
         created_at,
     ) = listing
 
-    st.subheader("✏️ Edit Listing")
+    st.subheader(
+        "✏️ Edit Listing"
+    )
+
+    # ========================================================
+    # BASIC INFORMATION
+    # ========================================================
 
     title = st.text_input(
         "Listing Title",
-        value=old_title or ""
+        value=old_title or "",
+        key=f"edit_title_{listing_id}"
     )
 
     listing_type = st.selectbox(
         "Listing Type",
         LISTING_TYPES,
         index=(
-            LISTING_TYPES.index(old_listing_type)
-            if old_listing_type in LISTING_TYPES
+            LISTING_TYPES.index(
+                old_listing_type
+            )
+            if old_listing_type
+            in LISTING_TYPES
             else 0
-        )
+        ),
+        key=f"edit_listing_type_{listing_id}"
     )
 
     category = st.selectbox(
         "Category",
         MARKETPLACE_CATEGORIES,
         index=(
-            MARKETPLACE_CATEGORIES.index(old_category)
-            if old_category in MARKETPLACE_CATEGORIES
+            MARKETPLACE_CATEGORIES.index(
+                old_category
+            )
+            if old_category
+            in MARKETPLACE_CATEGORIES
             else 0
-        )
+        ),
+        key=f"edit_category_{listing_id}"
     )
 
     seller_name = st.text_input(
         "Seller Name",
-        value=old_seller_name or ""
+        value=old_seller_name or "",
+        key=f"edit_seller_name_{listing_id}"
     )
 
     location = st.text_input(
         "Location",
-        value=old_location or ""
+        value=old_location or "",
+        key=f"edit_location_{listing_id}"
     )
 
     description = st.text_area(
         "Description",
         value=old_description or "",
-        height=150
+        height=150,
+        key=f"edit_description_{listing_id}"
     )
 
     price = st.text_input(
         "Price",
-        value=old_price or ""
+        value=old_price or "",
+        key=f"edit_price_{listing_id}"
     )
 
-    image_url = st.text_input(
-        "Image URL",
-        value=old_image_url or ""
+    # ========================================================
+    # EXISTING IMAGES
+    # ========================================================
+
+    st.divider()
+
+    st.subheader(
+        "📸 Product Photos"
     )
+
+    existing_images = get_listing_images(
+        listing_id
+    )
+
+    if existing_images:
+
+        st.caption(
+            f"{len(existing_images)} saved image(s)"
+        )
+
+        for image_row in existing_images:
+
+            (
+                image_id,
+                image_listing_id,
+                image_data,
+                filename,
+                mime_type,
+                sort_order,
+                image_created_at,
+            ) = image_row
+
+            image_col, info_col, action_col = (
+                st.columns(
+                    [1.5, 2.5, 1]
+                )
+            )
+
+            with image_col:
+
+                if image_data:
+
+                    st.image(
+                        image_data,
+                        width=180
+                    )
+
+            with info_col:
+
+                st.write(
+                    filename
+                    or f"Product Photo {image_id}"
+                )
+
+                st.caption(
+                    mime_type
+                )
+
+            with action_col:
+
+                if st.button(
+                    "🗑️ Delete",
+                    key=(
+                        f"delete_image_"
+                        f"{listing_id}_"
+                        f"{image_id}"
+                    ),
+                    use_container_width=True
+                ):
+
+                    deleted = (
+                        delete_listing_image(
+                            image_id=image_id,
+                            listing_id=listing_id
+                        )
+                    )
+
+                    if deleted:
+
+                        st.success(
+                            "Image deleted."
+                        )
+
+                    else:
+
+                        st.error(
+                            "Unable to delete image."
+                        )
+
+                    st.rerun()
+
+            st.divider()
+
+    else:
+
+        # ----------------------------------------------------
+        # Legacy URL image
+        # ----------------------------------------------------
+
+        if old_image_url:
+
+            st.write(
+                "Legacy listing image"
+            )
+
+            st.image(
+                old_image_url,
+                width=250
+            )
+
+            st.caption(
+                "This listing still uses an old "
+                "image URL. You can add uploaded "
+                "images below."
+            )
+
+        else:
+
+            st.info(
+                "No product photos have been added yet."
+            )
+
+    # ========================================================
+    # ADD MORE IMAGES
+    # ========================================================
+
+    current_image_count = (
+        get_listing_image_count(
+            listing_id
+        )
+    )
+
+    remaining_slots = (
+        MAX_MARKETPLACE_IMAGES
+        - current_image_count
+    )
+
+    if remaining_slots > 0:
+
+        st.subheader(
+            "➕ Add More Photos"
+        )
+
+        st.caption(
+            f"You can add {remaining_slots} "
+            f"more image(s). Maximum: "
+            f"{MAX_MARKETPLACE_IMAGES}."
+        )
+
+        new_images = st.file_uploader(
+            "Choose additional product images",
+            type=[
+                "jpg",
+                "jpeg",
+                "png",
+                "webp"
+            ],
+            accept_multiple_files=True,
+            key=f"edit_images_{listing_id}"
+        )
+
+        if new_images:
+
+            if len(new_images) > remaining_slots:
+
+                st.error(
+                    f"You can only add "
+                    f"{remaining_slots} more image(s)."
+                )
+
+            else:
+
+                st.success(
+                    f"📸 {len(new_images)} "
+                    f"new image(s) selected."
+                )
+
+                preview_cols = st.columns(
+                    min(
+                        len(new_images),
+                        5
+                    )
+                )
+
+                for index, uploaded_file in enumerate(
+                    new_images
+                ):
+
+                    with preview_cols[
+                        index % len(preview_cols)
+                    ]:
+
+                        st.image(
+                            uploaded_file,
+                            caption=(
+                                f"New Photo "
+                                f"{index + 1}"
+                            ),
+                            use_container_width=True
+                        )
+
+    else:
+
+        st.info(
+            f"You already have the maximum "
+            f"of {MAX_MARKETPLACE_IMAGES} images."
+        )
+
+        new_images = []
+
+    # ========================================================
+    # CONTACT
+    # ========================================================
 
     phone = st.text_input(
         "Phone",
-        value=old_phone or ""
+        value=old_phone or "",
+        key=f"edit_phone_{listing_id}"
     )
 
     whatsapp = st.text_input(
         "WhatsApp",
-        value=old_whatsapp or ""
+        value=old_whatsapp or "",
+        key=f"edit_whatsapp_{listing_id}"
     )
 
-    col1, col2 = st.columns(2)
+    st.divider()
+
+    # ========================================================
+    # SAVE / DELETE
+    # ========================================================
+
+    col1, col2 = st.columns(
+        2
+    )
 
     with col1:
 
@@ -476,28 +1013,111 @@ def render_edit_listing(listing_id):
             use_container_width=True
         ):
 
-            update_listing(
+            if not title.strip():
+
+                st.error(
+                    "Please enter a listing title."
+                )
+
+                return
+
+            if not seller_name.strip():
+
+                st.error(
+                    "Please enter your seller name."
+                )
+
+                return
+
+            if not location.strip():
+
+                st.error(
+                    "Please enter your location."
+                )
+
+                return
+
+            if not description.strip():
+
+                st.error(
+                    "Please provide a description."
+                )
+
+                return
+
+            if (
+                new_images
+                and len(new_images)
+                > remaining_slots
+            ):
+
+                st.error(
+                    f"You can only add "
+                    f"{remaining_slots} more image(s)."
+                )
+
+                return
+
+            # ------------------------------------------------
+            # Update listing details
+            # ------------------------------------------------
+
+            updated = update_listing(
+
                 listing_id=listing_id,
+
                 user_id=st.session_state.user_id,
+
                 title=title,
+
                 listing_type=listing_type,
+
                 category=category,
+
                 seller_name=seller_name,
+
                 location=location,
+
                 description=description,
+
                 price=price,
-                image_url=image_url,
+
+                # Keep legacy field unchanged.
+                image_url=old_image_url or "",
+
                 phone=phone,
+
                 whatsapp=whatsapp,
             )
 
-            st.success(
-                "✅ Listing updated."
-            )
+            # ------------------------------------------------
+            # Save new images
+            # ------------------------------------------------
 
-            st.session_state.marketplace_view = "explore"
+            if updated and new_images:
 
-            st.rerun()
+                add_listing_images(
+                    listing_id=listing_id,
+                    uploaded_images=new_images
+                )
+
+            if updated:
+
+                st.success(
+                    "✅ Listing updated successfully."
+                )
+
+                st.session_state.marketplace_view = (
+                    "explore"
+                )
+
+                st.rerun()
+
+            else:
+
+                st.error(
+                    "Unable to update listing."
+                )
 
     with col2:
 
@@ -506,42 +1126,64 @@ def render_edit_listing(listing_id):
             use_container_width=True
         ):
 
-            st.session_state.confirm_delete = True
+            st.session_state[
+                "confirm_delete_listing"
+            ] = True
+
+    # ========================================================
+    # DELETE CONFIRMATION
+    # ========================================================
 
     if st.session_state.get(
-        "confirm_delete",
+        "confirm_delete_listing",
         False
     ):
 
         st.warning(
             "Are you sure you want to permanently "
-            "delete this listing?"
+            "delete this listing and all of its "
+            "product photos?"
         )
 
-        confirm_col1, confirm_col2 = st.columns(2)
+        confirm_col1, confirm_col2 = (
+            st.columns(2)
+        )
 
         with confirm_col1:
 
             if st.button(
-                "Yes, Delete",
+                "Yes, Delete Everything",
                 type="primary",
                 use_container_width=True
             ):
 
-                delete_listing(
+                deleted = delete_listing(
                     listing_id=listing_id,
                     user_id=st.session_state.user_id
                 )
 
-                st.session_state.confirm_delete = False
+                if deleted:
 
-                st.session_state.marketplace_view = "explore"
+                    st.session_state[
+                        "confirm_delete_listing"
+                    ] = False
 
-                st.success(
-                    "Listing deleted."
-                )
+                    st.session_state.marketplace_view = (
+                        "explore"
+                    )
 
-                st.rerun()
+                    st.success(
+                        "Listing and all product photos "
+                        "were deleted."
+                    )
+
+                    st.rerun()
+
+                else:
+
+                    st.error(
+                        "Unable to delete listing."
+                    )
 
         with confirm_col2:
 
@@ -550,7 +1192,9 @@ def render_edit_listing(listing_id):
                 use_container_width=True
             ):
 
-                st.session_state.confirm_delete = False
+                st.session_state[
+                    "confirm_delete_listing"
+                ] = False
 
                 st.rerun()
 
@@ -561,23 +1205,29 @@ def render_edit_listing(listing_id):
 
 def render_explore():
 
-    st.subheader("🔎 Explore Marketplace")
+    st.subheader(
+        "🔎 Explore Marketplace"
+    )
 
     search = st.text_input(
         "🔍 Search",
         placeholder=(
             "Search clothes, fabrics, shoes, "
             "designers, tailors..."
-        )
+        ),
+        key="marketplace_search"
     )
 
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3 = st.columns(
+        3
+    )
 
     with col1:
 
         category = st.selectbox(
             "Category",
-            ["All"] + MARKETPLACE_CATEGORIES,
+            ["All"]
+            + MARKETPLACE_CATEGORIES,
             key="explore_category"
         )
 
@@ -585,7 +1235,8 @@ def render_explore():
 
         listing_type = st.selectbox(
             "Listing Type",
-            ["All"] + LISTING_TYPES,
+            ["All"]
+            + LISTING_TYPES,
             key="explore_listing_type"
         )
 
@@ -600,9 +1251,13 @@ def render_explore():
     st.divider()
 
     listings = get_listings(
+
         search=search,
+
         category=category,
+
         listing_type=listing_type,
+
         location=location,
     )
 
@@ -648,10 +1303,13 @@ def render_explore():
     ):
 
         row = listings[
-            row_start:row_start + 3
+            row_start:
+            row_start + 3
         ]
 
-        cols = st.columns(3)
+        cols = st.columns(
+            3
+        )
 
         for col, listing in zip(
             cols,
@@ -680,7 +1338,38 @@ def render_explore():
                     border=True
                 ):
 
-                    if image_url:
+                    # ------------------------------------------------
+                    # Primary image
+                    # ------------------------------------------------
+
+                    listing_images = (
+                        get_listing_images(
+                            listing_id
+                        )
+                    )
+
+                    if listing_images:
+
+                        primary_image = (
+                            listing_images[0][2]
+                        )
+
+                        st.image(
+                            primary_image,
+                            use_container_width=True
+                        )
+
+                        if len(
+                            listing_images
+                        ) > 1:
+
+                            st.caption(
+                                f"📸 "
+                                f"{len(listing_images)} "
+                                f"photos"
+                            )
+
+                    elif image_url:
 
                         st.image(
                             image_url,
@@ -708,7 +1397,9 @@ def render_explore():
                             unsafe_allow_html=True
                         )
 
-                    st.subheader(title)
+                    st.subheader(
+                        title
+                    )
 
                     st.caption(
                         f"{listing_type_value} • "
@@ -733,7 +1424,9 @@ def render_explore():
                             description[:120]
                         )
 
-                        if len(description) > 120:
+                        if len(
+                            description
+                        ) > 120:
 
                             short_description += "..."
 
@@ -747,27 +1440,33 @@ def render_explore():
 
                     if st.button(
                         "👁️ View Details",
-                        key=f"view_{listing_id}",
+                        key=(
+                            f"view_{listing_id}"
+                        ),
                         use_container_width=True
                     ):
 
-                        st.session_state.selected_listing_id = (
-                            listing_id
-                        )
+                        st.session_state[
+                            "selected_listing_id"
+                        ] = listing_id
 
-                        st.session_state.marketplace_view = (
-                            "details"
-                        )
+                        st.session_state[
+                            "marketplace_view"
+                        ] = "details"
 
                         st.rerun()
 
 
 # ============================================================
-# MAIN MARKETPLACE
+# MY LISTINGS
 # ============================================================
+
 def render_my_listings():
 
-    if not st.session_state.get("logged_in", False):
+    if not st.session_state.get(
+        "logged_in",
+        False
+    ):
 
         st.warning(
             "Please login to view your listings."
@@ -775,16 +1474,23 @@ def render_my_listings():
 
         return
 
-    user_id = st.session_state.user_id
+    user_id = (
+        st.session_state.user_id
+    )
 
-    listings = get_user_listings(user_id)
+    listings = get_user_listings(
+        user_id
+    )
 
-    st.subheader("📦 My Listings")
+    st.subheader(
+        "📦 My Listings"
+    )
 
     if not listings:
 
         st.info(
-            "You haven't created any marketplace listings yet."
+            "You haven't created any "
+            "marketplace listings yet."
         )
 
         return
@@ -811,13 +1517,40 @@ def render_my_listings():
             created_at,
         ) = listing
 
-        with st.container(border=True):
+        with st.container(
+            border=True
+        ):
 
-            col1, col2 = st.columns([1, 3])
+            col1, col2 = st.columns(
+                [1, 3]
+            )
 
             with col1:
 
-                if image_url:
+                listing_images = (
+                    get_listing_images(
+                        listing_id
+                    )
+                )
+
+                if listing_images:
+
+                    st.image(
+                        listing_images[0][2],
+                        use_container_width=True
+                    )
+
+                    if len(
+                        listing_images
+                    ) > 1:
+
+                        st.caption(
+                            f"📸 "
+                            f"{len(listing_images)} "
+                            f"photos"
+                        )
+
+                elif image_url:
 
                     st.image(
                         image_url,
@@ -837,7 +1570,9 @@ def render_my_listings():
                             border-radius:10px;
                             font-size:60px;
                         ">
-                            {listing_icon(listing_type)}
+                            {listing_icon(
+                                listing_type
+                            )}
                         </div>
                         """,
                         unsafe_allow_html=True
@@ -845,20 +1580,32 @@ def render_my_listings():
 
             with col2:
 
-                st.subheader(title)
+                st.subheader(
+                    title
+                )
 
                 st.caption(
-                    f"{listing_type} • {category}"
+                    f"{listing_type} • "
+                    f"{category}"
                 )
 
                 if price:
-                    st.write(f"💰 **{price}**")
+
+                    st.write(
+                        f"💰 **{price}**"
+                    )
 
                 if location:
-                    st.caption(f"📍 {location}")
+
+                    st.caption(
+                        f"📍 {location}"
+                    )
 
                 if description:
-                    st.write(description[:200])
+
+                    st.write(
+                        description[:200]
+                    )
 
                 st.caption(
                     f"Posted: {created_at}"
@@ -866,27 +1613,47 @@ def render_my_listings():
 
                 if st.button(
                     "✏️ Edit",
-                    key=f"edit_my_listing_{listing_id}"
+                    key=(
+                        f"edit_my_listing_"
+                        f"{listing_id}"
+                    )
                 ):
 
-                    st.session_state.selected_listing_id = listing_id
-                    st.session_state.marketplace_view = "edit"
+                    st.session_state[
+                        "selected_listing_id"
+                    ] = listing_id
+
+                    st.session_state[
+                        "marketplace_view"
+                    ] = "edit"
+
                     st.rerun()
 
+
+# ============================================================
+# MAIN MARKETPLACE
+# ============================================================
 
 def render_marketplace():
 
     init_marketplace_table()
 
-    if "marketplace_view" not in st.session_state:
+    if (
+        "marketplace_view"
+        not in st.session_state
+    ):
 
-        st.session_state.marketplace_view = "explore"
+        st.session_state.marketplace_view = (
+            "explore"
+        )
 
-    st.title("🛍️ Fashion Marketplace")
+    st.title(
+        "🛍️ Fashion Marketplace"
+    )
 
     st.write(
-        "Discover fashion products and services from "
-        "sellers, creators, and businesses."
+        "Discover fashion products and services "
+        "from sellers, creators, and businesses."
     )
 
     st.divider()
@@ -926,9 +1693,13 @@ def render_marketplace():
     # ========================================================
 
     tab1, tab2, tab3 = st.tabs([
+
         "🔎 Explore",
+
         "➕ Create Listing",
+
         "📦 My Listings",
+
     ])
 
     with tab1:

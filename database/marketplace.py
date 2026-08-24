@@ -6,11 +6,18 @@ from pathlib import Path
 # DATABASE CONFIGURATION
 # ============================================================
 
-DB_PATH = Path(__file__).resolve().parent.parent / "stylesense.db"
+DB_PATH = (
+    Path(__file__).resolve().parent.parent
+    / "stylesense.db"
+)
 
 
 def get_connection():
-    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+    DB_PATH.parent.mkdir(
+        parents=True,
+        exist_ok=True
+    )
 
     conn = sqlite3.connect(
         DB_PATH,
@@ -25,6 +32,7 @@ def get_connection():
 # ============================================================
 
 MARKETPLACE_CATEGORIES = [
+
     # Products
     "Clothing",
     "Fabrics & Textiles",
@@ -65,6 +73,7 @@ LISTING_TYPES = [
 # ============================================================
 
 REQUIRED_COLUMNS = {
+
     "user_id": "INTEGER",
     "title": "TEXT",
     "listing_type": "TEXT",
@@ -90,7 +99,7 @@ def init_marketplace_table():
     cursor = conn.cursor()
 
     # ========================================================
-    # CREATE TABLE IF IT DOES NOT EXIST
+    # CREATE MAIN MARKETPLACE TABLE
     # ========================================================
 
     cursor.execute("""
@@ -271,8 +280,9 @@ def init_marketplace_table():
 
         SET title = 'Untitled Listing'
 
-        WHERE title IS NULL
-        OR title = ''
+        WHERE
+            title IS NULL
+            OR title = ''
     """)
 
     cursor.execute("""
@@ -280,8 +290,9 @@ def init_marketplace_table():
 
         SET seller_name = 'Unknown Seller'
 
-        WHERE seller_name IS NULL
-        OR seller_name = ''
+        WHERE
+            seller_name IS NULL
+            OR seller_name = ''
     """)
 
     cursor.execute("""
@@ -289,8 +300,9 @@ def init_marketplace_table():
 
         SET listing_type = 'Product'
 
-        WHERE listing_type IS NULL
-        OR listing_type = ''
+        WHERE
+            listing_type IS NULL
+            OR listing_type = ''
     """)
 
     cursor.execute("""
@@ -298,13 +310,49 @@ def init_marketplace_table():
 
         SET category = 'Other'
 
-        WHERE category IS NULL
-        OR category = ''
+        WHERE
+            category IS NULL
+            OR category = ''
     """)
 
     # ========================================================
-    # SAVE
+    # MULTIPLE MARKETPLACE IMAGES TABLE
     # ========================================================
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS marketplace_listing_images (
+
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+            listing_id INTEGER NOT NULL,
+
+            image_data BLOB NOT NULL,
+
+            filename TEXT DEFAULT '',
+
+            mime_type TEXT DEFAULT 'image/jpeg',
+
+            sort_order INTEGER DEFAULT 0,
+
+            created_at TIMESTAMP
+                DEFAULT CURRENT_TIMESTAMP,
+
+            FOREIGN KEY (listing_id)
+                REFERENCES marketplace_listings(id)
+                ON DELETE CASCADE
+        )
+    """)
+
+    # ========================================================
+    # INDEX FOR FASTER IMAGE LOOKUPS
+    # ========================================================
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS
+        idx_marketplace_listing_images_listing_id
+
+        ON marketplace_listing_images(listing_id)
+    """)
 
     conn.commit()
     conn.close()
@@ -355,16 +403,16 @@ def create_listing(
     """, (
 
         user_id,
-        title.strip(),
+        str(title).strip(),
         listing_type,
         category,
-        seller_name.strip(),
-        location.strip(),
-        description.strip(),
-        price.strip(),
-        image_url.strip(),
-        phone.strip(),
-        whatsapp.strip()
+        str(seller_name).strip(),
+        str(location).strip(),
+        str(description).strip(),
+        str(price).strip(),
+        str(image_url).strip(),
+        str(phone).strip(),
+        str(whatsapp).strip()
 
     ))
 
@@ -375,6 +423,298 @@ def create_listing(
     conn.close()
 
     return listing_id
+
+
+# ============================================================
+# ADD IMAGE TO LISTING
+# ============================================================
+
+def add_listing_image(
+    listing_id,
+    image_data,
+    filename="",
+    mime_type="image/jpeg",
+    sort_order=0
+):
+
+    init_marketplace_table()
+
+    conn = get_connection()
+
+    try:
+
+        conn.execute("""
+            INSERT INTO marketplace_listing_images (
+
+                listing_id,
+                image_data,
+                filename,
+                mime_type,
+                sort_order
+
+            )
+
+            VALUES (?, ?, ?, ?, ?)
+
+        """, (
+
+            listing_id,
+            sqlite3.Binary(image_data),
+            str(filename or ""),
+            str(mime_type or "image/jpeg"),
+            int(sort_order)
+
+        ))
+
+        conn.commit()
+
+    finally:
+
+        conn.close()
+
+
+# ============================================================
+# ADD MULTIPLE IMAGES
+# ============================================================
+
+def add_listing_images(
+    listing_id,
+    uploaded_images
+):
+
+    if not uploaded_images:
+        return
+
+    init_marketplace_table()
+
+    conn = get_connection()
+
+    try:
+
+        cursor = conn.cursor()
+
+        # ----------------------------------------------------
+        # Find current highest sort order
+        # ----------------------------------------------------
+
+        cursor.execute("""
+            SELECT COALESCE(
+                MAX(sort_order),
+                -1
+            )
+
+            FROM marketplace_listing_images
+
+            WHERE listing_id = ?
+        """, (listing_id,))
+
+        result = cursor.fetchone()
+
+        current_order = (
+            result[0]
+            if result and result[0] is not None
+            else -1
+        )
+
+        # ----------------------------------------------------
+        # Insert images
+        # ----------------------------------------------------
+
+        for index, uploaded_file in enumerate(
+            uploaded_images
+        ):
+
+            image_data = uploaded_file.getvalue()
+
+            if not image_data:
+                continue
+
+            filename = (
+                getattr(
+                    uploaded_file,
+                    "name",
+                    ""
+                )
+                or ""
+            )
+
+            mime_type = (
+                getattr(
+                    uploaded_file,
+                    "type",
+                    None
+                )
+                or "image/jpeg"
+            )
+
+            cursor.execute("""
+                INSERT INTO marketplace_listing_images (
+
+                    listing_id,
+                    image_data,
+                    filename,
+                    mime_type,
+                    sort_order
+
+                )
+
+                VALUES (?, ?, ?, ?, ?)
+
+            """, (
+
+                listing_id,
+                sqlite3.Binary(image_data),
+                filename,
+                mime_type,
+                current_order + index + 1
+
+            ))
+
+        conn.commit()
+
+    finally:
+
+        conn.close()
+
+
+# ============================================================
+# GET LISTING IMAGES
+# ============================================================
+
+def get_listing_images(listing_id):
+
+    init_marketplace_table()
+
+    conn = get_connection()
+
+    try:
+
+        cursor = conn.execute("""
+            SELECT
+
+                id,
+                listing_id,
+                image_data,
+                filename,
+                mime_type,
+                sort_order,
+                created_at
+
+            FROM marketplace_listing_images
+
+            WHERE listing_id = ?
+
+            ORDER BY
+                sort_order ASC,
+                id ASC
+
+        """, (listing_id,))
+
+        return cursor.fetchall()
+
+    finally:
+
+        conn.close()
+
+
+# ============================================================
+# GET IMAGE COUNT
+# ============================================================
+
+def get_listing_image_count(listing_id):
+
+    init_marketplace_table()
+
+    conn = get_connection()
+
+    try:
+
+        cursor = conn.execute("""
+            SELECT COUNT(*)
+
+            FROM marketplace_listing_images
+
+            WHERE listing_id = ?
+
+        """, (listing_id,))
+
+        result = cursor.fetchone()
+
+        return (
+            result[0]
+            if result
+            else 0
+        )
+
+    finally:
+
+        conn.close()
+
+
+# ============================================================
+# DELETE SINGLE LISTING IMAGE
+# ============================================================
+
+def delete_listing_image(
+    image_id,
+    listing_id
+):
+
+    init_marketplace_table()
+
+    conn = get_connection()
+
+    try:
+
+        cursor = conn.execute("""
+            DELETE FROM marketplace_listing_images
+
+            WHERE
+                id = ?
+                AND listing_id = ?
+
+        """, (
+            image_id,
+            listing_id
+        ))
+
+        conn.commit()
+
+        return cursor.rowcount > 0
+
+    finally:
+
+        conn.close()
+
+
+# ============================================================
+# DELETE ALL LISTING IMAGES
+# ============================================================
+
+def delete_all_listing_images(
+    listing_id
+):
+
+    init_marketplace_table()
+
+    conn = get_connection()
+
+    try:
+
+        cursor = conn.execute("""
+            DELETE FROM marketplace_listing_images
+
+            WHERE listing_id = ?
+
+        """, (listing_id,))
+
+        conn.commit()
+
+        return cursor.rowcount > 0
+
+    finally:
+
+        conn.close()
 
 
 # ============================================================
@@ -424,7 +764,9 @@ def get_listings(
 
         if search and search.strip():
 
-            search_value = f"%{search.strip()}%"
+            search_value = (
+                f"%{search.strip()}%"
+            )
 
             query += """
                 AND (
@@ -437,18 +779,23 @@ def get_listings(
             """
 
             values.extend([
+
                 search_value,
                 search_value,
                 search_value,
                 search_value,
                 search_value
+
             ])
 
         # ----------------------------------------------------
         # CATEGORY
         # ----------------------------------------------------
 
-        if category and category != "All":
+        if (
+            category
+            and category != "All"
+        ):
 
             query += """
                 AND category = ?
@@ -460,7 +807,10 @@ def get_listings(
         # LISTING TYPE
         # ----------------------------------------------------
 
-        if listing_type and listing_type != "All":
+        if (
+            listing_type
+            and listing_type != "All"
+        ):
 
             query += """
                 AND listing_type = ?
@@ -674,6 +1024,21 @@ def delete_listing(
     conn = get_connection()
 
     try:
+
+        # ----------------------------------------------------
+        # Delete images first
+        # ----------------------------------------------------
+
+        conn.execute("""
+            DELETE FROM marketplace_listing_images
+
+            WHERE listing_id = ?
+
+        """, (listing_id,))
+
+        # ----------------------------------------------------
+        # Delete listing
+        # ----------------------------------------------------
 
         cursor = conn.execute("""
             DELETE FROM marketplace_listings
