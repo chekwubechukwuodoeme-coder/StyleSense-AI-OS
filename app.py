@@ -54,11 +54,12 @@ st.set_page_config(
     page_title="StyleSense AI OS",
     page_icon="👗",
     layout="wide",
+    initial_sidebar_state="collapsed",
 )
 
 
 # ============================================================
-# STYLESENSE GLOBAL APP + SIDEBAR
+# GLOBAL CSS
 # ============================================================
 
 st.markdown(
@@ -66,7 +67,72 @@ st.markdown(
     <style>
 
     /* ========================================================
-       GLOBAL BACKGROUND
+       GLOBAL RESET
+       ======================================================== */
+
+    html,
+    body {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        overflow-x: hidden !important;
+    }
+
+    * {
+        box-sizing: border-box;
+    }
+
+
+    /* ========================================================
+       REMOVE STREAMLIT DEFAULT SIDEBAR
+       ======================================================== */
+
+    section[data-testid="stSidebar"] {
+        display: none !important;
+    }
+
+
+    /* ========================================================
+       REMOVE STREAMLIT SIDEBAR TOGGLE
+       ======================================================== */
+
+    button[kind="headerNoPadding"] {
+        display: none !important;
+    }
+
+    [data-testid="stSidebarCollapsedControl"] {
+        display: none !important;
+    }
+
+
+    /* ========================================================
+       MAIN APP
+       ======================================================== */
+
+    [data-testid="stAppViewContainer"] {
+        width: 100% !important;
+        max-width: 100% !important;
+        overflow-x: hidden !important;
+        background: transparent !important;
+    }
+
+    [data-testid="stMain"] {
+        width: 100% !important;
+        max-width: 100% !important;
+        overflow-x: hidden !important;
+        background: transparent !important;
+    }
+
+    [data-testid="stMainBlockContainer"] {
+        width: 100% !important;
+        max-width: 100% !important;
+        overflow-x: hidden !important;
+    }
+
+
+    /* ========================================================
+       BACKGROUND
        ======================================================== */
 
     .stApp {
@@ -106,21 +172,255 @@ st.markdown(
 
 
     /* ========================================================
-       MAIN CONTENT
+       IMAGES
        ======================================================== */
 
-    [data-testid="stAppViewContainer"],
-    [data-testid="stMain"],
-    [data-testid="stMainBlockContainer"] {
-        background: transparent !important;
+    img {
+        max-width: 100% !important;
+        height: auto !important;
     }
 
 
     /* ========================================================
-       SIDEBAR
+       BUTTONS
        ======================================================== */
 
-    section[data-testid="stSidebar"] {
+    .stButton {
+        max-width: 100% !important;
+    }
+
+    .stButton > button {
+        max-width: 100% !important;
+    }
+
+
+    /* ========================================================
+       INPUTS
+       ======================================================== */
+
+    input,
+    textarea,
+    select {
+        font-size: 16px !important;
+    }
+
+
+    /* ========================================================
+       MOBILE TOP NAVIGATION
+       ======================================================== */
+
+    .stylesense-mobile-topbar {
+
+        position: fixed !important;
+
+        top: 0 !important;
+        left: 0 !important;
+
+        width: 100% !important;
+
+        height: 58px !important;
+
+        z-index: 999999 !important;
+
+        display: flex !important;
+
+        align-items: center !important;
+
+        background:
+            rgba(31, 41, 45, 0.98) !important;
+
+        border-bottom:
+            1px solid
+            rgba(57, 255, 20, 0.25) !important;
+
+        box-shadow:
+            0 4px 20px
+            rgba(0, 0, 0, 0.30) !important;
+
+        backdrop-filter:
+            blur(15px) !important;
+
+        -webkit-backdrop-filter:
+            blur(15px) !important;
+
+        padding:
+            5px 6px !important;
+    }
+
+
+    /* ========================================================
+       TOPBAR ROW
+       ======================================================== */
+
+    .stylesense-mobile-topbar
+    [data-testid="stHorizontalBlock"] {
+
+        display: flex !important;
+
+        flex-direction: row !important;
+
+        flex-wrap: nowrap !important;
+
+        align-items: center !important;
+
+        justify-content: space-between !important;
+
+        width: 100% !important;
+
+        gap: 2px !important;
+
+        margin: 0 !important;
+    }
+
+
+    /* ========================================================
+       TOPBAR COLUMNS
+       ======================================================== */
+
+    .stylesense-mobile-topbar
+    [data-testid="stColumn"] {
+
+        min-width: 0 !important;
+
+        padding: 0 !important;
+
+        flex: 1 1 0 !important;
+
+        display: flex !important;
+
+        align-items: center !important;
+
+        justify-content: center !important;
+    }
+
+
+    /* ========================================================
+       TOPBAR BUTTON CONTAINER
+       ======================================================== */
+
+    .stylesense-mobile-topbar
+    .stButton {
+
+        width: 100% !important;
+
+        margin: 0 !important;
+
+        padding: 0 !important;
+    }
+
+
+    /* ========================================================
+       TOPBAR BUTTON
+       ======================================================== */
+
+    .stylesense-mobile-topbar
+    .stButton > button {
+
+        width: 100% !important;
+
+        height: 46px !important;
+
+        min-height: 46px !important;
+
+        padding: 0 !important;
+
+        margin: 0 !important;
+
+        background:
+            transparent !important;
+
+        border:
+            none !important;
+
+        border-radius:
+            10px !important;
+
+        color:
+            #FFFFFF !important;
+
+        font-size:
+            20px !important;
+
+        line-height:
+            1 !important;
+
+        box-shadow:
+            none !important;
+    }
+
+
+    .stylesense-mobile-topbar
+    .stButton > button:hover {
+
+        background:
+            rgba(57, 255, 20, 0.10) !important;
+
+        color:
+            #39FF14 !important;
+    }
+
+
+    .stylesense-mobile-topbar
+    .stButton > button:focus {
+
+        background:
+            rgba(57, 255, 20, 0.12) !important;
+
+        color:
+            #39FF14 !important;
+
+        outline:
+            none !important;
+
+        box-shadow:
+            none !important;
+    }
+
+
+    /* ========================================================
+       PAGE TOP SPACE
+       ======================================================== */
+
+    .stylesense-page-wrapper {
+
+        width: 100% !important;
+
+        padding-top: 0 !important;
+    }
+
+
+    /* ========================================================
+       LEFT DRAWER
+       ======================================================== */
+
+    .stylesense-mobile-drawer {
+
+        position: fixed !important;
+
+        top: 0 !important;
+
+        left: 0 !important;
+
+        width: 300px !important;
+
+        max-width: 82vw !important;
+
+        height: 100vh !important;
+
+        height: 100dvh !important;
+
+        z-index: 1000001 !important;
+
+        overflow-y: auto !important;
+
+        overflow-x: hidden !important;
+
+        padding:
+            20px
+            16px
+            35px
+            16px !important;
+
         background:
             linear-gradient(
                 180deg,
@@ -129,176 +429,343 @@ st.markdown(
                 #1F292D 100%
             ) !important;
 
-        border-right: 2px solid #39FF14 !important;
-    }
+        border-right:
+            2px solid
+            #39FF14 !important;
 
-
-    section[data-testid="stSidebar"] > div {
-        background: transparent !important;
-    }
-
-
-    /* ========================================================
-       SIDEBAR TEXT
-       ======================================================== */
-
-    section[data-testid="stSidebar"] h1,
-    section[data-testid="stSidebar"] h2,
-    section[data-testid="stSidebar"] h3,
-    section[data-testid="stSidebar"] p,
-    section[data-testid="stSidebar"] span,
-    section[data-testid="stSidebar"] label {
-        color: #FFFFFF !important;
-    }
-
-
-    /* ========================================================
-       SIDEBAR BUTTONS
-       ======================================================== */
-
-    section[data-testid="stSidebar"]
-    div[data-testid="stButton"] button {
-        background: rgba(57, 255, 20, 0.06) !important;
-        color: #FFFFFF !important;
-        border: 1px solid rgba(57, 255, 20, 0.10) !important;
-        border-radius: 10px !important;
-
-        transition:
-            background 0.15s ease,
-            color 0.15s ease,
-            border 0.15s ease,
-            transform 0.15s ease;
-    }
-
-
-    section[data-testid="stSidebar"]
-    div[data-testid="stButton"] button:hover {
-        background: rgba(57, 255, 20, 0.15) !important;
-        color: #FFFFFF !important;
-        border-color: rgba(57, 255, 20, 0.40) !important;
-        transform: translateX(2px);
         box-shadow:
-            0 0 12px rgba(57, 255, 20, 0.15) !important;
+            8px 0 35px
+            rgba(0, 0, 0, 0.55) !important;
+
+        transform:
+            translateX(0) !important;
     }
 
 
     /* ========================================================
-       SIDEBAR DIVIDERS
+       DRAWER SCROLLBAR
        ======================================================== */
 
-    section[data-testid="stSidebar"] hr {
-        border-color: rgba(57, 255, 20, 0.15) !important;
-        margin: 12px 0 !important;
+    .stylesense-mobile-drawer::-webkit-scrollbar {
+        width: 5px;
+    }
+
+    .stylesense-mobile-drawer::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .stylesense-mobile-drawer::-webkit-scrollbar-thumb {
+        background: rgba(57, 255, 20, 0.30);
+        border-radius: 10px;
     }
 
 
     /* ========================================================
-       SIDEBAR LINKS
+       DRAWER CONTENT
        ======================================================== */
 
-    section[data-testid="stSidebar"] a {
-        color: #FFFFFF !important;
-    }
+    .stylesense-mobile-drawer-content {
 
-    section[data-testid="stSidebar"] a:hover {
-        color: #39FF14 !important;
-    }
+        width: 100% !important;
 
+        min-height: 100% !important;
 
-    /* ========================================================
-       SIDEBAR SECTION HEADERS
-       ======================================================== */
-
-    .stylesense-sidebar-section {
-        margin-top: 12px;
-        margin-bottom: 6px;
-        padding: 6px 10px;
-
-        color: #8DFF70 !important;
-
-        font-size: 11px;
-        font-weight: 800;
-
-        letter-spacing: 1.2px;
-        text-transform: uppercase;
+        position: relative !important;
     }
 
 
     /* ========================================================
-       SIDEBAR SUBSECTION
+       DRAWER BRAND
        ======================================================== */
 
-    .stylesense-sidebar-subsection {
-        margin-top: 5px;
-        margin-bottom: 4px;
-        padding-left: 8px;
-
-        color: #B8C5C9 !important;
-
-        font-size: 10px;
-        font-weight: 700;
-
-        letter-spacing: 0.8px;
-        text-transform: uppercase;
-    }
-
-
-    /* ========================================================
-       SIDEBAR BRAND
-       ======================================================== */
-
+    .stylesense-mobile-drawer
     .stylesense-brand {
+
         font-size: 25px;
+
         font-weight: 800;
+
         letter-spacing: -0.5px;
+
         margin-bottom: 0;
     }
 
 
+    .stylesense-mobile-drawer
     .stylesense-brand-accent {
+
         color: #39FF14;
     }
 
 
+    .stylesense-mobile-drawer
     .stylesense-tagline {
+
         color: #AAB7BB !important;
+
         font-size: 11px;
+
         margin-top: -4px;
-        margin-bottom: 10px;
+
+        margin-bottom: 14px;
     }
 
 
     /* ========================================================
-       PROFILE CARD
+       DRAWER BUTTONS
        ======================================================== */
 
-    .stylesense-profile-card {
+    .stylesense-mobile-drawer
+    .stButton {
+
+        width: 100% !important;
+
+        margin: 0 !important;
+
+        padding: 0 !important;
+    }
+
+
+    .stylesense-mobile-drawer
+    .stButton > button {
+
+        width: 100% !important;
+
+        min-height: 44px !important;
+
+        margin-bottom: 5px !important;
+
+        text-align: left !important;
+
+        padding:
+            8px 12px !important;
+
         background:
-            linear-gradient(
-                135deg,
-                rgba(57, 255, 20, 0.08),
-                rgba(255, 255, 255, 0.03)
-            );
+            rgba(57, 255, 20, 0.05) !important;
 
-        border: 1px solid rgba(57, 255, 20, 0.16);
-        border-radius: 14px;
+        color:
+            #FFFFFF !important;
 
-        padding: 10px;
+        border:
+            1px solid
+            rgba(57, 255, 20, 0.08) !important;
 
-        margin-top: 6px;
-        margin-bottom: 8px;
+        border-radius:
+            10px !important;
+
+        box-shadow:
+            none !important;
+    }
+
+
+    .stylesense-mobile-drawer
+    .stButton > button:hover {
+
+        background:
+            rgba(57, 255, 20, 0.14) !important;
+
+        border-color:
+            rgba(57, 255, 20, 0.30) !important;
+
+        color:
+            #39FF14 !important;
     }
 
 
     /* ========================================================
-       ACTIVE NAVIGATION INDICATOR
+       DRAWER HEADINGS
        ======================================================== */
 
-    .stylesense-active-label {
-        color: #39FF14 !important;
-        font-weight: 800;
+    .stylesense-sidebar-section {
+
+        margin-top: 16px;
+
+        margin-bottom: 7px;
+
+        padding:
+            6px 5px;
+
+        color:
+            #8DFF70 !important;
+
+        font-size:
+            11px;
+
+        font-weight:
+            800;
+
+        letter-spacing:
+            1.2px;
+
+        text-transform:
+            uppercase;
     }
 
+
+    /* ========================================================
+       DRAWER CLOSE BUTTON
+       ======================================================== */
+
+    .stylesense-mobile-drawer
+    .stylesense-close-button
+    .stButton > button {
+
+        background:
+            rgba(255, 255, 255, 0.05) !important;
+
+        border:
+            1px solid
+            rgba(255, 255, 255, 0.08) !important;
+
+        text-align:
+            center !important;
+
+        color:
+            #FFFFFF !important;
+
+        margin-bottom:
+            12px !important;
+    }
+
+
+    /* ========================================================
+       OVERLAY
+       ======================================================== */
+
+    .stylesense-mobile-overlay {
+
+        position: fixed !important;
+
+        top: 0 !important;
+
+        left: 0 !important;
+
+        width: 100vw !important;
+
+        height: 100vh !important;
+
+        height: 100dvh !important;
+
+        z-index: 1000000 !important;
+
+        background:
+            rgba(0, 0, 0, 0.50) !important;
+    }
+
+
+    /* ========================================================
+       MOBILE CONTENT
+       ======================================================== */
+
+    @media (max-width: 600px) {
+
+        header[data-testid="stHeader"] {
+            display: none !important;
+        }
+
+        [data-testid="stMainBlockContainer"] {
+
+            width: 100% !important;
+
+            max-width: 100% !important;
+
+            padding:
+                76px
+                14px
+                30px
+                14px !important;
+        }
+
+        h1 {
+            font-size: 28px !important;
+            line-height: 1.15 !important;
+        }
+
+        h2 {
+            font-size: 23px !important;
+            line-height: 1.2 !important;
+        }
+
+        h3 {
+            font-size: 19px !important;
+            line-height: 1.25 !important;
+        }
+
+        .stButton > button {
+
+            min-height:
+                46px !important;
+
+            border-radius:
+                12px !important;
+        }
+
+        [data-testid="stHorizontalBlock"] {
+
+            width: 100% !important;
+
+            max-width: 100% !important;
+
+            min-width: 0 !important;
+        }
+
+        [data-testid="stColumn"] {
+
+            min-width: 0 !important;
+
+            max-width: 100% !important;
+        }
+
+        [data-testid="stDataFrame"] {
+
+            max-width: 100% !important;
+
+            overflow-x: auto !important;
+        }
+
+        [data-testid="stFileUploader"] {
+
+            max-width: 100% !important;
+        }
+
+        [data-testid="stAlert"] {
+
+            max-width: 100% !important;
+        }
+    }
+
+
+    /* ========================================================
+       DESKTOP
+       ======================================================== */
+
+    @media (min-width: 601px) {
+
+        .stylesense-mobile-topbar {
+            display: none !important;
+        }
+
+        .stylesense-mobile-drawer {
+            display: none !important;
+        }
+
+        .stylesense-mobile-overlay {
+            display: none !important;
+        }
+
+        [data-testid="stMainBlockContainer"] {
+
+            width: 100% !important;
+
+            max-width: 100% !important;
+
+            padding:
+                32px
+                40px
+                40px
+                40px !important;
+        }
+    }
 
     </style>
     """,
@@ -334,7 +801,11 @@ CSS_PATH = (
 def load_css():
 
     if not CSS_PATH.exists():
-        print(f"CSS file not found: {CSS_PATH}")
+
+        print(
+            f"CSS file not found: {CSS_PATH}"
+        )
+
         return
 
     try:
@@ -384,6 +855,8 @@ DEFAULT_SESSION_STATE = {
     "auth_page": "login",
 
     "main_navigation": "Dashboard",
+
+    "mobile_menu_open": False,
 
     "open_profile_settings": False,
 
@@ -446,25 +919,35 @@ if not st.session_state.logged_in:
 
         st.session_state.logged_in = True
 
-        st.session_state.user_id = current_user["id"]
+        st.session_state.user_id = (
+            current_user["id"]
+        )
 
-        st.session_state.user_name = current_user["full_name"]
+        st.session_state.user_name = (
+            current_user["full_name"]
+        )
 
-        st.session_state.user_email = current_user["email"]
+        st.session_state.user_email = (
+            current_user["email"]
+        )
 
         st.session_state.user_profession = (
+
             current_user.get(
                 "profession",
                 "Fashion Designer"
             )
+
             or "Fashion Designer"
         )
 
         st.session_state.user_avatar_url = (
+
             current_user.get(
                 "avatar_url",
                 ""
             )
+
             or ""
         )
 
@@ -497,20 +980,12 @@ if design_job_id:
     )
 
 
-    # --------------------------------------------------------
-    # GENERATING
-    # --------------------------------------------------------
-
     if status == "generating":
 
         st.info(
             "🎨 Your AI fashion design is being generated..."
         )
 
-
-    # --------------------------------------------------------
-    # COMPLETED
-    # --------------------------------------------------------
 
     elif status == "completed":
 
@@ -555,10 +1030,6 @@ if design_job_id:
         st.session_state.design_generation_job_id = None
 
 
-    # --------------------------------------------------------
-    # FAILED
-    # --------------------------------------------------------
-
     elif status == "failed":
 
         error = job_status.get(
@@ -592,10 +1063,6 @@ if design_job_id:
 
 PAGES = {
 
-    # --------------------------------------------------------
-    # WORKSPACE
-    # --------------------------------------------------------
-
     "Dashboard":
         render_dashboard,
 
@@ -610,11 +1077,6 @@ PAGES = {
 
     "Design Library":
         render_design_library,
-
-
-    # --------------------------------------------------------
-    # AI FASHION TOOLS
-    # --------------------------------------------------------
 
     "Fashion Inspiration":
         render_fashion_inspiration,
@@ -652,11 +1114,6 @@ PAGES = {
     "AI Virtual Stylist":
         render_virtual_stylist,
 
-
-    # --------------------------------------------------------
-    # PRODUCTION
-    # --------------------------------------------------------
-
     "Production Manager":
         render_production_manager,
 
@@ -668,11 +1125,6 @@ PAGES = {
 
     "Tech Packs":
         render_tech_packs,
-
-
-    # --------------------------------------------------------
-    # BUSINESS
-    # --------------------------------------------------------
 
     "Clients":
         render_clients,
@@ -689,21 +1141,11 @@ PAGES = {
     "Revenue & Profit":
         render_revenue_profit,
 
-
-    # --------------------------------------------------------
-    # COMMUNITY / MARKETPLACE
-    # --------------------------------------------------------
-
     "Fashion Professionals":
         render_profiles,
 
     "Marketplace":
         render_marketplace,
-
-
-    # --------------------------------------------------------
-    # SETTINGS
-    # --------------------------------------------------------
 
     "Settings":
         render_settings,
@@ -714,10 +1156,190 @@ PAGES = {
 
 
 # ============================================================
-# SIDEBAR NAVIGATION
+# NAVIGATION HELPER
 # ============================================================
 
-with st.sidebar:
+def navigate_to(page):
+
+    st.session_state.main_navigation = page
+
+    st.session_state.mobile_menu_open = False
+
+    st.rerun()
+
+
+# ============================================================
+# MOBILE TOP BAR
+#
+# THIS IS ALWAYS FIXED AT THE TOP.
+#
+# ☰   🏠   🎨   🤖   📚   ⚙️
+# ============================================================
+
+st.markdown(
+    '<div class="stylesense-mobile-topbar">',
+    unsafe_allow_html=True
+)
+
+
+(
+    mobile_menu_col,
+    mobile_home_col,
+    mobile_design_col,
+    mobile_ai_col,
+    mobile_library_col,
+    mobile_settings_col,
+) = st.columns(
+    [0.85, 1, 1, 1, 1, 1]
+)
+
+
+# ============================================================
+# MENU
+# ============================================================
+
+with mobile_menu_col:
+
+    if st.button(
+        "☰",
+        key="mobile_menu_button",
+        use_container_width=True,
+    ):
+
+        st.session_state.mobile_menu_open = not (
+            st.session_state.get(
+                "mobile_menu_open",
+                False
+            )
+        )
+
+        st.rerun()
+
+
+# ============================================================
+# HOME
+# ============================================================
+
+with mobile_home_col:
+
+    if st.button(
+        "🏠",
+        key="mobile_home_button",
+        use_container_width=True,
+    ):
+
+        navigate_to(
+            "Dashboard"
+        )
+
+
+# ============================================================
+# DESIGN
+# ============================================================
+
+with mobile_design_col:
+
+    if st.button(
+        "🎨",
+        key="mobile_design_button",
+        use_container_width=True,
+    ):
+
+        navigate_to(
+            "Design Studio"
+        )
+
+
+# ============================================================
+# AI TEAM
+# ============================================================
+
+with mobile_ai_col:
+
+    if st.button(
+        "🤖",
+        key="mobile_ai_button",
+        use_container_width=True,
+    ):
+
+        navigate_to(
+            "AI Team"
+        )
+
+
+# ============================================================
+# LIBRARY
+# ============================================================
+
+with mobile_library_col:
+
+    if st.button(
+        "📚",
+        key="mobile_library_button",
+        use_container_width=True,
+    ):
+
+        navigate_to(
+            "Design Library"
+        )
+
+
+# ============================================================
+# SETTINGS
+# ============================================================
+
+with mobile_settings_col:
+
+    if st.button(
+        "⚙️",
+        key="mobile_settings_button",
+        use_container_width=True,
+    ):
+
+        navigate_to(
+            "Settings"
+        )
+
+
+st.markdown(
+    '</div>',
+    unsafe_allow_html=True
+)
+
+
+# ============================================================
+# MOBILE LEFT DRAWER
+# ============================================================
+
+if st.session_state.get(
+    "mobile_menu_open",
+    False
+):
+
+    # ========================================================
+    # DARK OVERLAY
+    # ========================================================
+
+    st.markdown(
+        '<div class="stylesense-mobile-overlay"></div>',
+        unsafe_allow_html=True
+    )
+
+
+    # ========================================================
+    # LEFT DRAWER
+    # ========================================================
+
+    st.markdown(
+        '<div class="stylesense-mobile-drawer">',
+        unsafe_allow_html=True
+    )
+
+    st.markdown(
+        '<div class="stylesense-mobile-drawer-content">',
+        unsafe_allow_html=True
+    )
+
 
     # ========================================================
     # BRAND
@@ -730,6 +1352,7 @@ with st.sidebar:
             Sense
             </span>
         </div>
+
         <div class="stylesense-tagline">
             AI Fashion Operating System
         </div>
@@ -739,130 +1362,28 @@ with st.sidebar:
 
 
     # ========================================================
-    # USER PROFILE
+    # CLOSE
     # ========================================================
 
-    user_name = (
-        st.session_state.get(
-            "user_name"
-        )
-        or "StyleSense User"
-    )
-
-    user_profession = (
-        st.session_state.get(
-            "user_profession"
-        )
-        or "Fashion Designer"
-    )
-
-    avatar_url = (
-        st.session_state.get(
-            "user_avatar_url"
-        )
-        or ""
-    )
-
-    first_letter = (
-        str(user_name)[0].upper()
-        if user_name
-        else "U"
-    )
-
-
-    # --------------------------------------------------------
-    # PROFILE CARD
-    # --------------------------------------------------------
-
     st.markdown(
-        '<div class="stylesense-profile-card">',
+        '<div class="stylesense-close-button">',
         unsafe_allow_html=True
     )
 
-    profile_col1, profile_col2 = st.columns(
-        [1, 2.5],
-        vertical_alignment="center"
-    )
+    if st.button(
+        "✕  Close Menu",
+        key="mobile_drawer_close",
+        use_container_width=True,
+    ):
 
+        st.session_state.mobile_menu_open = False
 
-    # --------------------------------------------------------
-    # PROFILE IMAGE
-    # --------------------------------------------------------
-
-    with profile_col1:
-
-        if avatar_url:
-
-            st.image(
-                avatar_url,
-                width=58
-            )
-
-        else:
-
-            st.markdown(
-                f"""
-                <div style="
-                    width:58px;
-                    height:58px;
-                    border-radius:50%;
-                    background:linear-gradient(
-                        135deg,
-                        #7c3aed,
-                        #ec4899
-                    );
-                    display:flex;
-                    align-items:center;
-                    justify-content:center;
-                    color:white;
-                    font-size:24px;
-                    font-weight:700;
-                ">
-                    {first_letter}
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-
-    # --------------------------------------------------------
-    # NAME + PROFESSION
-    # --------------------------------------------------------
-
-    with profile_col2:
-
-        st.markdown(
-            f"**{user_name}**"
-        )
-
-        st.caption(
-            user_profession
-        )
-
+        st.rerun()
 
     st.markdown(
         '</div>',
         unsafe_allow_html=True
     )
-
-
-    # --------------------------------------------------------
-    # EDIT PROFILE
-    # --------------------------------------------------------
-
-    if st.button(
-        "Edit Profile →",
-        key="sidebar_edit_profile",
-        use_container_width=True,
-    ):
-
-        st.session_state.main_navigation = (
-            "Settings"
-        )
-
-        st.session_state.open_profile_settings = True
-
-        st.rerun()
 
 
     # ========================================================
@@ -877,7 +1398,7 @@ with st.sidebar:
     )
 
 
-    workspace_navigation = [
+    mobile_workspace_navigation = [
 
         ("🏠", "Dashboard"),
 
@@ -888,35 +1409,17 @@ with st.sidebar:
     ]
 
 
-    current_page = st.session_state.get(
-        "main_navigation",
-        "Dashboard"
-    )
-
-
-    for icon, label in workspace_navigation:
-
-        is_active = (
-            current_page == label
-        )
-
-        button_text = (
-            f"● {icon} {label}"
-            if is_active
-            else f"{icon} {label}"
-        )
+    for icon, label in mobile_workspace_navigation:
 
         if st.button(
-            button_text,
-            key=f"workspace_nav_{label}",
+            f"{icon}  {label}",
+            key=f"mobile_drawer_workspace_{label}",
             use_container_width=True,
         ):
 
-            st.session_state.main_navigation = (
+            navigate_to(
                 label
             )
-
-            st.rerun()
 
 
     # ========================================================
@@ -931,7 +1434,7 @@ with st.sidebar:
     )
 
 
-    ai_design_navigation = [
+    mobile_ai_navigation = [
 
         ("✨", "Design Studio"),
 
@@ -954,29 +1457,17 @@ with st.sidebar:
     ]
 
 
-    for icon, label in ai_design_navigation:
-
-        is_active = (
-            current_page == label
-        )
-
-        button_text = (
-            f"● {icon} {label}"
-            if is_active
-            else f"{icon} {label}"
-        )
+    for icon, label in mobile_ai_navigation:
 
         if st.button(
-            button_text,
-            key=f"ai_design_nav_{label}",
+            f"{icon}  {label}",
+            key=f"mobile_drawer_ai_{label}",
             use_container_width=True,
         ):
 
-            st.session_state.main_navigation = (
+            navigate_to(
                 label
             )
-
-            st.rerun()
 
 
     # ========================================================
@@ -991,7 +1482,7 @@ with st.sidebar:
     )
 
 
-    intelligence_navigation = [
+    mobile_intelligence_navigation = [
 
         ("📈", "AI Fashion Trends"),
 
@@ -1002,29 +1493,17 @@ with st.sidebar:
     ]
 
 
-    for icon, label in intelligence_navigation:
-
-        is_active = (
-            current_page == label
-        )
-
-        button_text = (
-            f"● {icon} {label}"
-            if is_active
-            else f"{icon} {label}"
-        )
+    for icon, label in mobile_intelligence_navigation:
 
         if st.button(
-            button_text,
-            key=f"intelligence_nav_{label}",
+            f"{icon}  {label}",
+            key=f"mobile_drawer_intelligence_{label}",
             use_container_width=True,
         ):
 
-            st.session_state.main_navigation = (
+            navigate_to(
                 label
             )
-
-            st.rerun()
 
 
     # ========================================================
@@ -1039,7 +1518,7 @@ with st.sidebar:
     )
 
 
-    production_navigation = [
+    mobile_production_navigation = [
 
         ("🏭", "Production Manager"),
 
@@ -1052,29 +1531,17 @@ with st.sidebar:
     ]
 
 
-    for icon, label in production_navigation:
-
-        is_active = (
-            current_page == label
-        )
-
-        button_text = (
-            f"● {icon} {label}"
-            if is_active
-            else f"{icon} {label}"
-        )
+    for icon, label in mobile_production_navigation:
 
         if st.button(
-            button_text,
-            key=f"production_nav_{label}",
+            f"{icon}  {label}",
+            key=f"mobile_drawer_production_{label}",
             use_container_width=True,
         ):
 
-            st.session_state.main_navigation = (
+            navigate_to(
                 label
             )
-
-            st.rerun()
 
 
     # ========================================================
@@ -1089,7 +1556,7 @@ with st.sidebar:
     )
 
 
-    business_navigation = [
+    mobile_business_navigation = [
 
         ("👥", "Clients"),
 
@@ -1104,29 +1571,17 @@ with st.sidebar:
     ]
 
 
-    for icon, label in business_navigation:
-
-        is_active = (
-            current_page == label
-        )
-
-        button_text = (
-            f"● {icon} {label}"
-            if is_active
-            else f"{icon} {label}"
-        )
+    for icon, label in mobile_business_navigation:
 
         if st.button(
-            button_text,
-            key=f"business_nav_{label}",
+            f"{icon}  {label}",
+            key=f"mobile_drawer_business_{label}",
             use_container_width=True,
         ):
 
-            st.session_state.main_navigation = (
+            navigate_to(
                 label
             )
-
-            st.rerun()
 
 
     # ========================================================
@@ -1141,7 +1596,7 @@ with st.sidebar:
     )
 
 
-    professional_navigation = [
+    mobile_professional_navigation = [
 
         ("👔", "Fashion Professionals"),
 
@@ -1150,36 +1605,22 @@ with st.sidebar:
     ]
 
 
-    for icon, label in professional_navigation:
-
-        is_active = (
-            current_page == label
-        )
-
-        button_text = (
-            f"● {icon} {label}"
-            if is_active
-            else f"{icon} {label}"
-        )
+    for icon, label in mobile_professional_navigation:
 
         if st.button(
-            button_text,
-            key=f"professional_nav_{label}",
+            f"{icon}  {label}",
+            key=f"mobile_drawer_professional_{label}",
             use_container_width=True,
         ):
 
-            st.session_state.main_navigation = (
+            navigate_to(
                 label
             )
-
-            st.rerun()
 
 
     # ========================================================
     # AI SHORTCUTS
     # ========================================================
-
-    st.divider()
 
     st.markdown(
         '<div class="stylesense-sidebar-section">'
@@ -1189,79 +1630,53 @@ with st.sidebar:
     )
 
 
-    # --------------------------------------------------------
-    # ASK STYLESENSE
-    # --------------------------------------------------------
-
     if st.button(
-        "✦ Ask StyleSense",
-        key="shortcut_ask_stylesense",
+        "✦  Ask StyleSense",
+        key="mobile_drawer_ask_stylesense",
         use_container_width=True,
     ):
 
-        st.session_state.main_navigation = (
+        navigate_to(
             "Ask StyleSense"
         )
 
-        st.rerun()
-
-
-    # --------------------------------------------------------
-    # AI CO-FOUNDER
-    # --------------------------------------------------------
 
     if st.button(
-        "🚀 AI Co-Founder",
-        key="shortcut_ai_cofounder",
+        "🚀  AI Co-Founder",
+        key="mobile_drawer_ai_cofounder",
         use_container_width=True,
     ):
 
-        st.session_state.main_navigation = (
+        navigate_to(
             "AI Co-Founder"
         )
 
-        st.rerun()
-
-
-    # --------------------------------------------------------
-    # MY TASKS
-    # --------------------------------------------------------
 
     if st.button(
-        "✓ My Tasks",
-        key="shortcut_my_tasks",
+        "✓  My Tasks",
+        key="mobile_drawer_tasks",
         use_container_width=True,
     ):
 
-        st.session_state.main_navigation = (
+        navigate_to(
             "My Tasks"
         )
 
-        st.rerun()
-
-
-    # --------------------------------------------------------
-    # NOTIFICATIONS
-    # --------------------------------------------------------
 
     if st.button(
-        "🔔 Notifications",
-        key="shortcut_notifications",
+        "🔔  Notifications",
+        key="mobile_drawer_notifications",
         use_container_width=True,
     ):
 
-        st.session_state.main_navigation = (
+        navigate_to(
             "Notifications"
         )
 
-        st.rerun()
-
 
     # ========================================================
-    # SETTINGS
+    # SYSTEM
     # ========================================================
-
-    st.divider()
 
     st.markdown(
         '<div class="stylesense-sidebar-section">'
@@ -1271,53 +1686,40 @@ with st.sidebar:
     )
 
 
-    # --------------------------------------------------------
-    # SETTINGS
-    # --------------------------------------------------------
-
     if st.button(
-        "⚙ Settings",
-        key="sidebar_settings",
+        "⚙  Settings",
+        key="mobile_drawer_settings",
         use_container_width=True,
     ):
 
-        st.session_state.main_navigation = (
+        navigate_to(
             "Settings"
         )
 
-        st.rerun()
-
-
-    # --------------------------------------------------------
-    # HELP & SUPPORT
-    # --------------------------------------------------------
 
     if st.button(
-        "❓ Help & Support",
-        key="sidebar_help_support",
+        "❓  Help & Support",
+        key="mobile_drawer_help",
         use_container_width=True,
     ):
 
-        st.session_state.main_navigation = (
+        navigate_to(
             "Help & Support"
         )
 
-        st.rerun()
-
-
-    # --------------------------------------------------------
-    # LOGOUT
-    # --------------------------------------------------------
 
     if st.button(
-        "↪ Logout",
-        key="sidebar_logout",
+        "↪  Logout",
+        key="mobile_drawer_logout",
         use_container_width=True,
     ):
 
         try:
+
             logout_user()
+
         except Exception:
+
             pass
 
         st.session_state.logged_in = False
@@ -1328,7 +1730,24 @@ with st.sidebar:
 
         st.session_state.user_email = None
 
+        st.session_state.mobile_menu_open = False
+
         st.rerun()
+
+
+    # ========================================================
+    # CLOSE DRAWER WRAPPERS
+    # ========================================================
+
+    st.markdown(
+        '</div>',
+        unsafe_allow_html=True
+    )
+
+    st.markdown(
+        '</div>',
+        unsafe_allow_html=True
+    )
 
 
 # ============================================================
@@ -1342,12 +1761,14 @@ current_page = st.session_state.get(
 
 
 # ============================================================
-# SPECIAL PAGES
+# SPECIAL PAGE — MY TASKS
 # ============================================================
 
 if current_page == "My Tasks":
 
-    st.title("✓ My Tasks")
+    st.title(
+        "✓ My Tasks"
+    )
 
     st.caption(
         "Your fashion workflow and AI tasks."
@@ -1358,9 +1779,15 @@ if current_page == "My Tasks":
     )
 
 
+# ============================================================
+# SPECIAL PAGE — NOTIFICATIONS
+# ============================================================
+
 elif current_page == "Notifications":
 
-    st.title("🔔 Notifications")
+    st.title(
+        "🔔 Notifications"
+    )
 
     st.caption(
         "Stay updated with your StyleSense workspace."
@@ -1388,13 +1815,13 @@ elif current_page == "Workspace":
         )
 
         st.info(
-            "Go to Projects and click "
-            "Open Project."
+            "Go to Projects and click Open Project."
         )
 
     else:
 
         render_workspace()
+
 
 # ============================================================
 # NORMAL PAGE ROUTING
