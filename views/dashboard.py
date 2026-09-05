@@ -1,90 +1,161 @@
-import base64
 import re
+from pathlib import Path
 
 import streamlit as st
 
-from database.dashboard import (
-    count_projects,
-    count_designers,
-    count_missions,
-)
-
-from pathlib import Path
-
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-AVATAR_PATH = PROJECT_ROOT / "assets" / "fashion_avatar.png"
-
+from database.dashboard import count_designers
 from database.database import get_all_designs
 from database.projects import get_projects
 
+
 # ============================================================
-# HELPERS
+# PATHS
 # ============================================================
 
-def clean_design_title(value):
-    """Create a short plain-text title from an AI design description."""
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
-    text = str(value or "AI Fashion Design")
-
-    # Remove markdown headings
-    text = re.sub(r"^#{1,6}\s*", "", text)
-
-    # Remove markdown emphasis
-    text = re.sub(r"\*\*(.*?)\*\*", r"\1", text)
-    text = re.sub(r"__(.*?)__", r"\1", text)
-    text = re.sub(r"\*(.*?)\*", r"\1", text)
-    text = re.sub(r"_(.*?)_", r"\1", text)
-
-    # Remove excessive whitespace
-    text = " ".join(text.split())
-
-    if not text:
-        text = "AI Fashion Design"
-
-    return text[:90]
+AVATAR_PATH = (
+    PROJECT_ROOT
+    / "assets"
+    / "fashion_avatar.png"
+)
 
 
-def navigate_to(target):
-    """Navigate to another StyleSense section."""
+# ============================================================
+# NAVIGATION HELPER
+# ============================================================
 
-    st.session_state.main_navigation = target
+def navigate_to(page: str):
+    """
+    Navigate to another StyleSense page.
+
+    Global navigation is owned by app.py.
+    This helper is only for dashboard action buttons.
+    """
+
+    st.session_state.main_navigation = page
     st.rerun()
 
 
 # ============================================================
-# DASHBOARD
+# TEXT HELPERS
 # ============================================================
 
-def render_dashboard():
+def clean_design_title(value) -> str:
+    """Convert an AI-generated design description into a short title."""
+
+    text = str(
+        value or "AI Fashion Design"
+    )
+
+    # Remove markdown headings
+    text = re.sub(
+        r"^\s*#{1,6}\s*",
+        "",
+        text,
+    )
+
+    # Remove markdown emphasis
+    text = re.sub(
+        r"\*\*(.*?)\*\*",
+        r"\1",
+        text,
+    )
+
+    text = re.sub(
+        r"__(.*?)__",
+        r"\1",
+        text,
+    )
+
+    text = re.sub(
+        r"\*(.*?)\*",
+        r"\1",
+        text,
+    )
+
+    text = re.sub(
+        r"_(.*?)_",
+        r"\1",
+        text,
+    )
+
+    # Remove excessive whitespace
+    text = " ".join(
+        text.split()
+    ).strip()
+
+    if not text:
+        return "AI Fashion Design"
+
+    if len(text) > 90:
+        text = (
+            text[:87].rstrip()
+            + "..."
+        )
+
+    return text
+
+
+def get_first_name() -> str:
+    """Return the logged-in user's first name."""
+
+    name = (
+        st.session_state.get(
+            "user_name"
+        )
+        or "there"
+    )
+
+    parts = (
+        str(name)
+        .strip()
+        .split()
+    )
+
+    return (
+        parts[0]
+        if parts
+        else "there"
+    )
+
+
+# ============================================================
+# DASHBOARD STYLING
+# ============================================================
+
+def render_dashboard_styles():
+    """
+    Dashboard-specific visual styling.
+
+    Global navigation and sidebar styling belong to app.py
+    and assets/css/style.css.
+    """
 
     st.markdown(
         """
         <style>
 
-        /* ========================================================
-        STYLESENSE — 4 COLOR DASHBOARD BACKGROUND
-        ======================================================== */
-
         .stApp {
             background:
                 radial-gradient(
                     circle at 8% 8%,
-                    rgba(245, 166, 35, 0.32),
+                    rgba(245, 166, 35, 0.28),
                     transparent 25%
                 ),
                 radial-gradient(
-                    circle at 90% 12%,
-                    rgba(57, 255, 20, 0.18),
+                    circle at 92% 12%,
+                    rgba(57, 255, 20, 0.14),
                     transparent 25%
                 ),
                 radial-gradient(
                     circle at 15% 85%,
-                    rgba(0, 168, 107, 0.30),
+                    rgba(0, 168, 107, 0.25),
                     transparent 30%
                 ),
                 radial-gradient(
                     circle at 90% 85%,
-                    rgba(57, 255, 20, 0.12),
+                    rgba(57, 255, 20, 0.10),
                     transparent 25%
                 ),
                 linear-gradient(
@@ -101,10 +172,6 @@ def render_dashboard():
         }
 
 
-        /* ========================================================
-        STREAMLIT CONTENT — KEEP BACKGROUND TRANSPARENT
-        ======================================================== */
-
         [data-testid="stAppViewContainer"],
         [data-testid="stMain"],
         [data-testid="stMainBlockContainer"] {
@@ -112,118 +179,128 @@ def render_dashboard():
         }
 
 
-        /* ========================================================
-        MAIN HEADER
-        ======================================================== */
-
         div[data-testid="stVerticalBlockBorderWrapper"] {
             background:
                 linear-gradient(
                     135deg,
-                    rgba(0, 107, 69, 0.96),
-                    rgba(38, 50, 56, 0.94),
-                    rgba(245, 166, 35, 0.88)
+                    rgba(0, 107, 69, 0.92),
+                    rgba(38, 50, 56, 0.94)
                 ) !important;
 
-            border: 1px solid rgba(57, 255, 20, 0.25) !important;
+            border:
+                1px solid
+                rgba(57, 255, 20, 0.18) !important;
 
-            border-radius: 28px !important;
+            border-radius: 24px !important;
 
             box-shadow:
-                0 20px 60px rgba(0, 0, 0, 0.35),
-                0 0 40px rgba(57, 255, 20, 0.08) !important;
+                0 18px 50px
+                rgba(0, 0, 0, 0.24) !important;
         }
+
 
         div[data-testid="stVerticalBlockBorderWrapper"] > div {
             background: transparent !important;
         }
 
 
-        /* ========================================================
-        AI PROMPT
-        ======================================================== */
-
         div[data-baseweb="input"] {
-            background: rgba(255, 255, 255, 0.96) !important;
-            border: 2px solid rgba(57, 255, 20, 0.35) !important;
+            background:
+                rgba(255, 255, 255, 0.96) !important;
+
+            border:
+                2px solid
+                rgba(57, 255, 20, 0.25) !important;
+
             border-radius: 14px !important;
         }
+
 
         div[data-baseweb="input"] input {
             color: #263238 !important;
         }
+
 
         div[data-baseweb="input"] input::placeholder {
             color: #687277 !important;
         }
 
 
-        /* ========================================================
-        BUTTONS
-        ======================================================== */
-
         div[data-testid="stButton"] button {
-            background: rgba(0, 107, 69, 0.75) !important;
-            color: white !important;
-            border: 1px solid rgba(57, 255, 20, 0.35) !important;
+            background:
+                rgba(0, 107, 69, 0.78) !important;
+
+            color: #ffffff !important;
+
+            border:
+                1px solid
+                rgba(57, 255, 20, 0.28) !important;
+
             border-radius: 12px !important;
+
             font-weight: 600 !important;
+
+            transition:
+                all 0.18s ease !important;
         }
+
 
         div[data-testid="stButton"] button:hover {
-            background: #006B45 !important;
-            border-color: #39FF14 !important;
-            color: #FFFFFF !important;
+            background:
+                #006B45 !important;
+
+            border-color:
+                #39FF14 !important;
+
+            transform:
+                translateY(-1px);
         }
 
 
-        /* ========================================================
-        WORKSPACE METRICS
-        ======================================================== */
-
         div[data-testid="stMetric"] {
-            background: rgba(38, 50, 56, 0.65) !important;
-            border: 1px solid rgba(57, 255, 20, 0.18) !important;
+            background:
+                rgba(38, 50, 56, 0.65) !important;
+
+            border:
+                1px solid
+                rgba(57, 255, 20, 0.16) !important;
+
             border-radius: 16px !important;
+
             padding: 14px !important;
         }
 
+
         div[data-testid="stMetricValue"] {
-            color: #F5A623 !important;
+            color:
+                #F5A623 !important;
         }
+
 
         div[data-testid="stMetricLabel"] {
-            color: rgba(255, 255, 255, 0.82) !important;
+            color:
+                rgba(255, 255, 255, 0.82) !important;
         }
 
-
-        /* ========================================================
-        DIVIDERS
-        ======================================================== */
-
-        hr {
-            border-color: rgba(57, 255, 20, 0.18) !important;
-        }
-
-
-        /* ========================================================
-        HEADINGS
-        ======================================================== */
 
         .stApp h1,
         .stApp h2,
         .stApp h3,
         .stApp h4 {
-            color: #FFFFFF !important;
+            color:
+                #ffffff !important;
         }
 
 
-        /* ========================================================
-        CAPTIONS
-        ======================================================== */
-
         .stApp .stCaption {
-            color: rgba(255, 255, 255, 0.70) !important;
+            color:
+                rgba(255, 255, 255, 0.72) !important;
+        }
+
+
+        hr {
+            border-color:
+                rgba(57, 255, 20, 0.16) !important;
         }
 
         </style>
@@ -231,9 +308,12 @@ def render_dashboard():
         unsafe_allow_html=True,
     )
 
-    # ========================================================
-    # SESSION STATE
-    # ========================================================
+
+# ============================================================
+# SESSION STATE
+# ============================================================
+
+def initialize_dashboard_state():
 
     if "saved_designs" not in st.session_state:
         st.session_state.saved_designs = []
@@ -264,124 +344,88 @@ def render_dashboard():
             },
         ]
 
-    # ========================================================
-    # LOAD DATABASE DATA
-    # ========================================================
 
-    user_id = st.session_state.get("user_id")
+# ============================================================
+# DATABASE
+# ============================================================
 
-    try:
-        
-        all_projects = get_projects(
-            user_id=user_id
-        ) or []
-        projects = len(all_projects)
-    except Exception:
-        all_projects = []
-        projects = 0
+def load_dashboard_data():
 
-    try:
-        designers = count_designers()
-    except Exception:
-        designers = 0
-
-    try:
-        saved_designs = get_all_designs() or []
-    except Exception:
-        saved_designs = []
-
-    design_count = len(saved_designs)
-
-    # ========================================================
-    # TOP BAR
-    # ========================================================
-
-    _, top_right = st.columns(
-        [5, 1]
+    user_id = st.session_state.get(
+        "user_id"
     )
 
-    with top_right:
+    # --------------------------------------------------------
+    # PROJECTS
+    # --------------------------------------------------------
 
-        notification_col, profile_col, theme_col = st.columns(
-            [1, 1, 1]
+    try:
+
+        projects = (
+            get_projects(
+                user_id=user_id
+            )
+            or []
         )
 
-        # ----------------------------------------------------
-        # NOTIFICATIONS
-        # ----------------------------------------------------
+    except Exception:
 
-        with notification_col:
+        projects = []
 
-            if st.button(
-                "🔔",
-                key="dashboard_notifications",
-                help="Notifications",
-            ):
+    # --------------------------------------------------------
+    # DESIGNERS
+    # --------------------------------------------------------
 
-                navigate_to("Notifications")
+    try:
 
-        # ----------------------------------------------------
-        # PROFILE
-        # ----------------------------------------------------
+        designers = count_designers()
 
-        with profile_col:
+    except Exception:
 
-            if st.button(
-                "👤",
-                key="dashboard_profile",
-                help="Profile",
-            ):
+        designers = 0
 
-                navigate_to("Settings")
+    # --------------------------------------------------------
+    # DESIGNS
+    # --------------------------------------------------------
 
-        # ----------------------------------------------------
-        # APPEARANCE / DARK MODE
-        # ----------------------------------------------------
+    try:
 
-        with theme_col:
+        designs = (
+            get_all_designs()
+            or []
+        )
 
-            if st.button(
-                "🌙",
-                key="dashboard_theme",
-                help="Appearance",
-            ):
+    except Exception:
 
-                navigate_to("Settings")
+        designs = []
 
-    # ========================================================
-    # MAIN DASHBOARD HEADER + AI PROMPT + WORKSPACE
-    # ========================================================
-
-    user_name = st.session_state.get("user_name") or "there"
-
-    name_parts = str(user_name).strip().split()
-    first_name = name_parts[0] if name_parts else "there"
+    return {
+        "projects": projects,
+        "designers": designers,
+        "designs": designs,
+    }
 
 
-    # ========================================================
-    # ONE RECTANGULAR HEADER CONTAINER
-    # ========================================================
+# ============================================================
+# HERO / WELCOME SECTION
+# ============================================================
+
+def render_welcome_section(data):
+
+    first_name = get_first_name()
 
     with st.container(border=True):
 
-        # ----------------------------------------------------
-        # LEFT CONTENT + RIGHT FASHION AVATAR
-        # ----------------------------------------------------
-
-        header_left, header_right = st.columns(
+        left, right = st.columns(
             [3.2, 1.8],
-            vertical_alignment="center"
+            vertical_alignment="center",
         )
 
         # ====================================================
-        # LEFT SIDE
+        # LEFT
         # ====================================================
 
-        with header_left:
-
-            # ------------------------------------------------
-            # PERSONALIZED GREETING
-            # ------------------------------------------------
+        with left:
 
             st.markdown(
                 f"### HELLO, {first_name.upper()}!"
@@ -392,24 +436,15 @@ def render_dashboard():
             )
 
             st.caption(
-                "Your intelligent fashion workspace for design, "
-                "creativity, research and business."
+                "Your intelligent fashion workspace for "
+                "design, creativity, research and business."
             )
+
+            st.write("")
 
             # ------------------------------------------------
             # AI PROMPT
             # ------------------------------------------------
-
-            st.markdown(
-                """
-                <style>
-                div[data-testid="stButton"] button {
-                    white-space: nowrap !important;
-                }
-                </style>
-                """,
-                unsafe_allow_html=True,
-            )
 
             prompt = st.text_input(
                 "StyleSense AI",
@@ -420,31 +455,27 @@ def render_dashboard():
                 key="dashboard_prompt",
             )
 
-            prompt_col, button_col = st.columns(
+            prompt_info, prompt_action = st.columns(
                 [5, 1],
-                vertical_alignment="center"
+                vertical_alignment="center",
             )
 
-            with prompt_col:
+            with prompt_info:
 
                 st.caption(
                     "✨ Concepts • Designs • Fabrics • Styling • "
                     "Trends • Business"
                 )
 
-            with button_col:
+            with prompt_action:
 
-                generate = st.button(
+                ask_ai = st.button(
                     "⚡ Ask AI",
                     use_container_width=True,
                     key="dashboard_generate",
                 )
 
-            # ------------------------------------------------
-            # AI PROMPT ACTION
-            # ------------------------------------------------
-
-            if generate:
+            if ask_ai:
 
                 if not prompt.strip():
 
@@ -465,86 +496,92 @@ def render_dashboard():
                         prompt.strip()
                     )
 
-                    navigate_to("Design Studio")
+                    navigate_to(
+                        "Design Studio"
+                    )
 
-            # =================================================
-            # YOUR WORKSPACE
-            # =================================================
+            # ------------------------------------------------
+            # WORKSPACE STATISTICS
+            # ------------------------------------------------
 
+            st.write("")
 
             stats = [
-                ("📁", "Projects", projects),
-                ("🎨", "Designs", design_count),
+                (
+                    "📁",
+                    "Projects",
+                    len(data["projects"]),
+                ),
+                (
+                    "🎨",
+                    "Designs",
+                    len(data["designs"]),
+                ),
                 (
                     "✦",
                     "AI Generations",
                     len(st.session_state.messages),
                 ),
-                ("👥", "Designers", designers),
+                (
+                    "👥",
+                    "Designers",
+                    data["designers"],
+                ),
             ]
 
-            workspace_columns = st.columns(4)
+            metric_columns = st.columns(4)
 
-            for i, (icon, label, number) in enumerate(stats):
+            for index, (
+                icon,
+                label,
+                value,
+            ) in enumerate(stats):
 
-                with workspace_columns[i]:
+                with metric_columns[index]:
 
                     st.metric(
                         label=f"{icon} {label}",
-                        value=number,
+                        value=value,
                     )
 
         # ====================================================
-        # RIGHT SIDE — FASHION AVATAR
+        # RIGHT — FASHION AVATAR
         # ====================================================
 
-        with header_right:
+        with right:
 
-            avatar_path = (
-                Path(__file__).resolve().parent.parent
-                / "assets"
-                / "fashion_avatar.png"
-            )
+            if AVATAR_PATH.exists():
 
-            if avatar_path.exists():
-
-                st.markdown(
-                    f"""
-                    <div style="
-                        width: 100%;
-                        height: 560px;
-                        overflow: hidden;
-                        border-radius: 16px;
-                    ">
-                        <img
-                            src="data:image/png;base64,{base64.b64encode(
-                                avatar_path.read_bytes()
-                            ).decode()}"
-                            style="
-                                width: 100%;
-                                height: 100%;
-                                object-fit: fill;
-                                display: block;
-                            "
-                        >
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
+                st.image(
+                    AVATAR_PATH,
+                    use_container_width=True,
                 )
 
             else:
 
-                st.warning("Fashion avatar image not found.")
-    # ========================================================
-    # QUICK ACTIONS
-    # ========================================================
+                st.markdown(
+                    "## 👗"
+                )
+
+                st.caption(
+                    "StyleSense Fashion Avatar"
+                )
+
+
+# ============================================================
+# QUICK ACTIONS
+# ============================================================
+
+def render_quick_actions():
 
     st.divider()
 
-    st.subheader("Quick Actions")
+    st.subheader(
+        "Quick Actions"
+    )
 
     st.caption(
-        "Jump directly into your creative workflow"
+        "Jump directly into your creative workflow."
     )
 
     actions = [
@@ -582,14 +619,14 @@ def render_dashboard():
 
     columns = st.columns(5)
 
-    for i, (
+    for index, (
         icon,
         title,
         description,
         target,
     ) in enumerate(actions):
 
-        with columns[i]:
+        with columns[index]:
 
             st.markdown(
                 f"### {icon}"
@@ -605,22 +642,29 @@ def render_dashboard():
 
             if st.button(
                 f"Open {title}",
-                key=f"dashboard_action_{i}",
+                key=f"dashboard_action_{index}",
                 use_container_width=True,
             ):
 
-                navigate_to(target)
+                navigate_to(
+                    target
+                )
 
-    # ========================================================
-    # AI TEAM
-    # ========================================================
+
+# ============================================================
+# AI TEAM
+# ============================================================
+
+def render_ai_team():
 
     st.divider()
 
-    st.subheader("Your AI Team")
+    st.subheader(
+        "Your AI Team"
+    )
 
     st.caption(
-        "Five specialized AI agents working with you"
+        "Five specialized AI agents working with you."
     )
 
     agents = [
@@ -653,33 +697,16 @@ def render_dashboard():
 
     columns = st.columns(5)
 
-    for i, (
+    for index, (
         icon,
         name,
         role,
     ) in enumerate(agents):
 
-        with columns[i]:
+        with columns[index]:
 
-            # Circular-style avatar using Streamlit container
             st.markdown(
-                f"""
-                <div style="
-                    width:70px;
-                    height:70px;
-                    border-radius:50%;
-                    display:flex;
-                    align-items:center;
-                    justify-content:center;
-                    background:#111827;
-                    border:2px solid #374151;
-                    font-size:28px;
-                    margin:auto;
-                ">
-                    {icon}
-                </div>
-                """,
-                unsafe_allow_html=True,
+                f"### {icon}"
             )
 
             st.write(
@@ -692,160 +719,187 @@ def render_dashboard():
 
             if st.button(
                 "Open",
-                key=f"agent_{i}",
+                key=f"dashboard_agent_{index}",
                 use_container_width=True,
             ):
 
-                navigate_to("AI Team")
+                navigate_to(
+                    "AI Team"
+                )
 
     st.write("")
 
-    agent_col = st.columns([1, 2, 1])[1]
+    center = st.columns(
+        [1, 2, 1]
+    )[1]
 
-    with agent_col:
+    with center:
 
         if st.button(
             "View All Agents →",
-            use_container_width=True,
             key="view_all_agents",
+            use_container_width=True,
         ):
 
-            navigate_to("AI Team")
+            navigate_to(
+                "AI Team"
+            )
 
-    # ========================================================
-    # RECENT PROJECTS
-    # ========================================================
+
+# ============================================================
+# RECENT PROJECTS
+# ============================================================
+
+def render_recent_projects(projects):
 
     st.divider()
 
-    st.subheader("Recent Projects")
-
-    st.caption(
-        "Continue working on your latest fashion projects"
+    st.subheader(
+        "Recent Projects"
     )
 
-    try:
-       recent_projects = all_projects
-    except Exception as e:
-        recent_projects = []
-        st.error(f"Unable to load projects: {e}")
+    st.caption(
+        "Continue working on your latest fashion projects."
+    )
 
-
-    if not recent_projects:
+    if not projects:
 
         st.info(
             "📁 You don't have any projects yet. "
             "Create your first fashion project from Projects."
         )
 
-    else:
+        return
 
-        # Show the 3 most recent real projects
-        recent_projects = recent_projects[:3]
+    recent_projects = projects[:3]
 
-        columns = st.columns(len(recent_projects))
+    columns = st.columns(
+        len(recent_projects)
+    )
 
-        for i, project in enumerate(recent_projects):
+    for index, project in enumerate(
+        recent_projects
+    ):
 
-            project_id = project[0]
-            project_user_id = project[1]
-            project_title = project[2]
-            project_description = project[3]
-            project_category = project[4]
-            project_cover = project[5]
-            project_created = project[6]
+        with columns[index]:
 
-            with columns[i]:
+            try:
 
-                # Project card
-                with st.container(border=True):
+                project_id = project[0]
+                project_title = project[2]
+                project_description = project[3]
+                project_category = project[4]
+                project_cover = project[5]
+                project_created = project[6]
 
-                    if project_cover:
-                        st.image(
-                            project_cover,
-                            use_container_width=True
-                        )
-                    else:
-                        st.markdown(
-                            "### 📁"
-                        )
-
-                    st.write(
-                        f"**{project_title}**"
-                    )
-
-                    if project_description:
-
-                        st.caption(
-                            project_description
-                        )
-
-                    else:
-
-                        st.caption(
-                            "No description provided."
-                        )
-
-                    if project_category:
-
-                        st.caption(
-                            f"Category: {project_category}"
-                        )
-
-                    if project_created:
-
-                        st.caption(
-                            f"Created: {project_created}"
-                        )
-
-                    if st.button(
-                        "Open Project",
-                        key=f"dashboard_recent_project_{project_id}",
-                        use_container_width=True,
-                    ):
-
-                        st.session_state.current_project = {
-                            "id": project_id,
-                            "title": project_title,
-                            "description": project_description,
-                            "category": project_category,
-                            "created_at": project_created,
-                        }
-
-                        st.session_state.open_workspace = True
-
-                        st.session_state.main_navigation = "Workspace"
-
-                        st.rerun()
-
-
-        st.write("")
-
-        project_col = st.columns([1, 2, 1])[1]
-
-        with project_col:
-
-            if st.button(
-                "View All Projects →",
-                use_container_width=True,
-                key="view_all_projects",
+            except (
+                IndexError,
+                TypeError,
             ):
 
-                navigate_to("Projects")
+                continue
 
-    # ========================================================
-    # RECENT DESIGNS
-    # ========================================================
+            with st.container(border=True):
+
+                if project_cover:
+
+                    st.image(
+                        project_cover,
+                        use_container_width=True,
+                    )
+
+                else:
+
+                    st.markdown(
+                        "### 📁"
+                    )
+
+                st.write(
+                    f"**{project_title}**"
+                )
+
+                if project_description:
+
+                    st.caption(
+                        project_description
+                    )
+
+                else:
+
+                    st.caption(
+                        "No description provided."
+                    )
+
+                if project_category:
+
+                    st.caption(
+                        f"Category: {project_category}"
+                    )
+
+                if project_created:
+
+                    st.caption(
+                        f"Created: {project_created}"
+                    )
+
+                if st.button(
+                    "Open Project",
+                    key=f"dashboard_recent_project_{project_id}",
+                    use_container_width=True,
+                ):
+
+                    st.session_state.current_project = {
+                        "id": project_id,
+                        "title": project_title,
+                        "description": project_description,
+                        "category": project_category,
+                        "created_at": project_created,
+                    }
+
+                    st.session_state.open_workspace = True
+
+                    st.session_state.main_navigation = (
+                        "Workspace"
+                    )
+
+                    st.rerun()
+
+    st.write("")
+
+    center = st.columns(
+        [1, 2, 1]
+    )[1]
+
+    with center:
+
+        if st.button(
+            "View All Projects →",
+            key="view_all_projects",
+            use_container_width=True,
+        ):
+
+            navigate_to(
+                "Projects"
+            )
+
+
+# ============================================================
+# RECENT DESIGNS
+# ============================================================
+
+def render_recent_designs(designs):
 
     st.divider()
 
-    st.subheader("Recent Designs")
-
-    st.caption(
-        "Your latest AI-generated fashion work"
+    st.subheader(
+        "Recent Designs"
     )
 
-    if not saved_designs:
+    st.caption(
+        "Your latest AI-generated fashion work."
+    )
+
+    if not designs:
 
         st.info(
             "✨ Your Design Library is waiting.\n\n"
@@ -853,105 +907,118 @@ def render_dashboard():
             "and it will appear here automatically."
         )
 
-    else:
+        return
 
-        recent_designs = saved_designs[:4]
+    recent_designs = designs[:4]
 
-        columns = st.columns(4)
+    columns = st.columns(4)
 
-        for i, design in enumerate(recent_designs):
+    for index, design in enumerate(
+        recent_designs
+    ):
 
-            with columns[i]:
+        with columns[index]:
 
-                image = design.get("image")
+            image = design.get(
+                "image"
+            )
 
-                description = design.get(
+            title = clean_design_title(
+                design.get(
                     "design",
                     "AI Fashion Design",
                 )
+            )
 
-                mode = design.get(
-                    "mode",
-                    "AI Design",
+            mode = design.get(
+                "mode",
+                "AI Design",
+            )
+
+            created_at = design.get(
+                "created_at",
+                "",
+            )
+
+            if image:
+
+                st.image(
+                    image,
+                    use_container_width=True,
                 )
 
-                created_at = design.get(
-                    "created_at",
-                    "",
+            else:
+
+                st.info(
+                    "🎨 AI Design"
                 )
 
-                description = clean_design_title(
-                    description
-                )
+            st.write(
+                f"**{title}**"
+            )
 
-                if image:
+            st.caption(
+                f"✦ {mode}"
+            )
 
-                    st.image(
-                        image,
-                        use_container_width=True,
-                    )
-
-                else:
-
-                    st.info(
-                        "🎨 AI Design"
-                    )
-
-                st.write(
-                    f"**{description}**"
-                )
+            if created_at:
 
                 st.caption(
-                    f"✦ {mode}"
+                    f"📅 {created_at}"
                 )
 
-                if created_at:
+            if st.button(
+                "Open Design",
+                key=f"recent_design_{index}",
+                use_container_width=True,
+            ):
 
-                    st.caption(
-                        f"📅 {created_at}"
-                    )
-
-                if st.button(
-                    "Open Design",
-                    key=f"recent_design_{i}",
-                    use_container_width=True,
-                ):
-
-                    navigate_to("Design Library")
+                navigate_to(
+                    "Design Library"
+                )
 
     st.write("")
 
-    design_col = st.columns([1, 2, 1])[1]
+    center = st.columns(
+        [1, 2, 1]
+    )[1]
 
-    with design_col:
+    with center:
 
         if st.button(
             "View All Designs →",
-            use_container_width=True,
             key="view_all_designs",
+            use_container_width=True,
         ):
 
-            navigate_to("Design Library")
+            navigate_to(
+                "Design Library"
+            )
 
-    # ========================================================
-    # INTELLIGENCE CENTER
-    # ========================================================
+
+# ============================================================
+# INTELLIGENCE CENTER
+# ============================================================
+
+def render_intelligence_center():
 
     st.divider()
 
-    st.subheader("Intelligence Center")
-
-    st.caption(
-        "AI-powered intelligence for your next move"
+    st.subheader(
+        "Intelligence Center"
     )
 
-    intelligence_columns = st.columns(3)
+    st.caption(
+        "AI-powered intelligence for your next move."
+    )
+
+    columns = st.columns(3)
 
     # ========================================================
     # AI INSIGHTS
     # ========================================================
 
-    with intelligence_columns[0]:
+    with columns[0]:
 
         st.markdown(
             "### ✦ AI Insights"
@@ -969,17 +1036,19 @@ def render_dashboard():
 
         if st.button(
             "Explore Insights →",
-            use_container_width=True,
             key="dashboard_ai_insights",
+            use_container_width=True,
         ):
 
-            navigate_to("Fashion Assistant")
+            navigate_to(
+                "Ask StyleSense"
+            )
 
     # ========================================================
     # TRENDING NOW
     # ========================================================
 
-    with intelligence_columns[1]:
+    with columns[1]:
 
         st.markdown(
             "### 📈 Trending Now"
@@ -990,37 +1059,25 @@ def render_dashboard():
         )
 
         trends = [
-            (
-                "Sheer Elegance",
-                "↑ 82%",
-            ),
-            (
-                "Relaxed Luxury",
-                "↑ 74%",
-            ),
-            (
-                "Bold Tailoring",
-                "↑ 69%",
-            ),
-            (
-                "African Prints",
-                "↑ 61%",
-            ),
+            ("Sheer Elegance", "↑ 82%"),
+            ("Relaxed Luxury", "↑ 74%"),
+            ("Bold Tailoring", "↑ 69%"),
+            ("African Prints", "↑ 61%"),
         ]
 
         for name, value in trends:
 
-            trend_col_1, trend_col_2 = st.columns(
+            trend_left, trend_right = st.columns(
                 [3, 1]
             )
 
-            with trend_col_1:
+            with trend_left:
 
                 st.write(
                     f"**{name}**"
                 )
 
-            with trend_col_2:
+            with trend_right:
 
                 st.write(
                     value
@@ -1028,17 +1085,19 @@ def render_dashboard():
 
         if st.button(
             "View Trends →",
-            use_container_width=True,
             key="dashboard_trending",
+            use_container_width=True,
         ):
 
-            navigate_to("AI Fashion Trends")
+            navigate_to(
+                "AI Fashion Trends"
+            )
 
     # ========================================================
-    # MY TASKS
+    # TASKS
     # ========================================================
 
-    with intelligence_columns[2]:
+    with columns[2]:
 
         st.markdown(
             "### ✓ My Tasks"
@@ -1050,20 +1109,19 @@ def render_dashboard():
 
         completed = 0
 
-        for i, task in enumerate(
-            st.session_state.dashboard_tasks
-        ):
+        tasks = st.session_state.dashboard_tasks
+
+        for index, task in enumerate(tasks):
 
             checked = st.checkbox(
                 task["title"],
                 value=task["completed"],
-                key=f"dashboard_task_{i}",
+                key=f"dashboard_task_{index}",
             )
 
             task["completed"] = checked
 
             if checked:
-
                 completed += 1
 
             st.caption(
@@ -1072,32 +1130,37 @@ def render_dashboard():
             )
 
         st.write(
-            f"**{completed}/"
-            f"{len(st.session_state.dashboard_tasks)} "
-            f"completed**"
+            f"**{completed}/{len(tasks)} completed**"
         )
 
         if st.button(
             "Open Tasks →",
-            use_container_width=True,
             key="open_tasks",
+            use_container_width=True,
         ):
 
-            navigate_to("Projects")
+            navigate_to(
+                "My Tasks"
+            )
 
-    # ========================================================
-    # CONTINUE YOUR JOURNEY
-    # ========================================================
+
+# ============================================================
+# CONTINUE YOUR JOURNEY
+# ============================================================
+
+def render_continue_section():
 
     st.divider()
 
-    st.subheader("Continue Your Journey")
-
-    st.caption(
-        "Pick up where you left off"
+    st.subheader(
+        "Continue Your Journey"
     )
 
-    continue_items = [
+    st.caption(
+        "Pick up where you left off."
+    )
+
+    items = [
         (
             "🎨",
             "Design Studio",
@@ -1120,20 +1183,20 @@ def render_dashboard():
             "🤖",
             "AI Chat",
             "Chat with your AI fashion team",
-            "Fashion Assistant",
+            "Ask StyleSense",
         ),
     ]
 
     columns = st.columns(4)
 
-    for i, (
+    for index, (
         icon,
         title,
         description,
         target,
-    ) in enumerate(continue_items):
+    ) in enumerate(items):
 
-        with columns[i]:
+        with columns[index]:
 
             st.markdown(
                 f"### {icon}"
@@ -1149,64 +1212,63 @@ def render_dashboard():
 
             if st.button(
                 "Continue →",
-                key=f"continue_{i}",
+                key=f"continue_{index}",
                 use_container_width=True,
             ):
 
-                navigate_to(target)
+                navigate_to(
+                    target
+                )
 
-    # ========================================================
-    # BOTTOM NAVIGATION
-    # ========================================================
 
-    st.divider()
+# ============================================================
+# MAIN DASHBOARD RENDERER
+# ============================================================
 
-    st.caption(
-        "StyleSense Workspace"
+def render_dashboard():
+
+    # --------------------------------------------------------
+    # Dashboard setup
+    # --------------------------------------------------------
+
+    render_dashboard_styles()
+
+    initialize_dashboard_state()
+
+    # --------------------------------------------------------
+    # Load data
+    # --------------------------------------------------------
+
+    data = load_dashboard_data()
+
+    # --------------------------------------------------------
+    # Dashboard content ONLY
+    #
+    # app.py owns:
+    #
+    # ☰ StyleSense
+    # 🔔 Profile Appearance
+    # Home | Product | Create | AI Teams
+    # Sidebar
+    #
+    # --------------------------------------------------------
+
+    render_welcome_section(
+        data
     )
 
-    nav_columns = st.columns(5)
+    render_quick_actions()
 
-    bottom_navigation = [
-        (
-            "🏠",
-            "Home",
-            "Dashboard",
-        ),
-        (
-            "📦",
-            "Product",
-            "Marketplace",
-        ),
-        (
-            "＋",
-            "Create",
-            "Design Studio",
-        ),
-        (
-            "🤖",
-            "AI Teams",
-            "AI Team",
-        ),
-        (
-            "⋯",
-            "More",
-            "Settings",
-        ),
-    ]
+    render_ai_team()
 
-    for i, (
-        icon,
-        label,
-        target,
-    ) in enumerate(bottom_navigation):
+    render_recent_projects(
+        data["projects"]
+    )
 
-        with nav_columns[i]:
+    render_recent_designs(
+        data["designs"]
+    )
 
-            if st.button(
-                f"{icon} {label}",
-                key=f"bottom_nav_{i}",
-                use_container_width=True,
-            ):
+    render_intelligence_center()
 
-                navigate_to(target)
+    render_continue_section()

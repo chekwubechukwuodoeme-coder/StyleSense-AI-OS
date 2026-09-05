@@ -1,1303 +1,1239 @@
 /* ============================================================
    STYLESENSE AI OS
-   PREMIUM GLOBAL DESIGN SYSTEM
+   GLOBAL NAVIGATION + LAYOUT
    ============================================================ */
 
-:root {
-    --ss-bg: #050914;
-    --ss-bg-2: #080d18;
-    --ss-card: #0b1220;
-    --ss-card-2: #101827;
-
-    --ss-purple: #8b5cf6;
-    --ss-purple-bright: #a855f7;
-    --ss-magenta: #d946ef;
-    --ss-cyan: #22d3ee;
-    --ss-emerald: #10b981;
-    --ss-orange: #f97316;
-    --ss-blue: #3b82f6;
-
-    --ss-text: #f8fafc;
-    --ss-muted: #94a3b8;
-    --ss-border: rgba(148, 163, 184, 0.14);
-
-    --ss-radius: 16px;
-}
 
 /* ============================================================
-   APP BACKGROUND
+   RESET
+   ============================================================ */
+
+html,
+body {
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    width: 100% !important;
+    max-width: 100% !important;
+
+    overflow-x: hidden !important;
+}
+
+
+* {
+    box-sizing: border-box;
+}
+
+
+/* ============================================================
+   APP
    ============================================================ */
 
 .stApp {
+
+    min-height: 100vh !important;
+
     background:
-        radial-gradient(
-            circle at 75% 5%,
-            rgba(139, 92, 246, 0.08),
-            transparent 28%
-        ),
-        radial-gradient(
-            circle at 15% 85%,
-            rgba(34, 211, 238, 0.035),
-            transparent 25%
-        ),
-        var(--ss-bg);
-    color: var(--ss-text);
+        radial-gradient(circle at 8% 8%,
+            rgba(245, 166, 35, 0.30),
+            transparent 25%),
+
+        radial-gradient(circle at 90% 12%,
+            rgba(57, 255, 20, 0.16),
+            transparent 25%),
+
+        radial-gradient(circle at 15% 85%,
+            rgba(0, 107, 69, 0.28),
+            transparent 30%),
+
+        linear-gradient(135deg,
+            #263238 0%,
+            #263238 30%,
+            #006B45 55%,
+            #263238 75%,
+            #F5A623 100%) !important;
+
+    background-attachment: fixed !important;
 }
 
-/* Main content */
+
+[data-testid="stAppViewContainer"] {
+
+    width: 100% !important;
+    max-width: 100% !important;
+
+    background: transparent !important;
+
+    overflow-x: hidden !important;
+}
+
+
+[data-testid="stMain"] {
+
+    width: 100% !important;
+    max-width: 100% !important;
+
+    background: transparent !important;
+
+    overflow-x: hidden !important;
+}
+
+
+[data-testid="stMainBlockContainer"] {
+
+    width: 100% !important;
+    max-width: 100% !important;
+
+    margin-left: 0 !important;
+
+    overflow-x: hidden !important;
+}
+
+
+/* ============================================================
+   REMOVE STREAMLIT NATIVE SIDEBAR
+   ============================================================ */
+
+section[data-testid="stSidebar"] {
+
+    display: none !important;
+}
+
+
+[data-testid="stSidebarCollapsedControl"] {
+
+    display: none !important;
+}
+
+
+/* ============================================================
+   REMOVE STREAMLIT HEADER
+   ============================================================ */
+
+header[data-testid="stHeader"] {
+
+    display: none !important;
+}
+
+
+#MainMenu {
+
+    visibility: hidden !important;
+}
+
+
+footer {
+
+    visibility: hidden !important;
+}
+
+
+/* ============================================================
+   MAIN CONTENT
+   ============================================================ */
 
 .main .block-container {
-    max-width: 1500px;
-    padding-top: 1.4rem;
-    padding-bottom: 4rem;
-    padding-left: 2.5rem;
-    padding-right: 2.5rem;
+
+    width: 100% !important;
+    max-width: 100% !important;
+
+    margin-left: 0 !important;
+
+    padding-top: 128px !important;
+
+    padding-right: 40px !important;
+    padding-bottom: 40px !important;
+    padding-left: 40px !important;
 }
 
+
 /* ============================================================
-   SIDEBAR
+   TOP HEADER
    ============================================================ */
 
-[data-testid="stSidebar"] {
+.st-key-stylesense_topbar {
+
+    position: fixed !important;
+
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+
+    width: 100% !important;
+
+    height: 116px !important;
+
+    z-index: 999990 !important;
+
+    padding:
+        8px 22px 6px 22px !important;
+
     background:
-        linear-gradient(
-            180deg,
-            rgba(8, 13, 24, 0.98),
-            rgba(5, 9, 20, 0.99)
-        );
+        rgba(31, 41, 45, 0.98) !important;
 
-    border-right: 1px solid rgba(148, 163, 184, 0.10);
-}
-
-[data-testid="stSidebar"] > div:first-child {
-    padding: 1.15rem 0.85rem 1.5rem 0.85rem;
-}
-
-/* Sidebar text */
-
-[data-testid="stSidebar"] p,
-[data-testid="stSidebar"] span,
-[data-testid="stSidebar"] label {
-    color: #dbe4f0;
-}
-
-/* Sidebar buttons */
-
-[data-testid="stSidebar"] .stButton > button {
-    width: 100%;
-    min-height: 40px;
-
-    border: 1px solid transparent;
-    border-radius: 10px;
-
-    background: transparent;
-
-    color: #9eabc0;
-
-    font-size: 13px;
-    font-weight: 500;
-
-    text-align: left;
-
-    transition:
-        background 180ms ease,
-        color 180ms ease,
-        border-color 180ms ease,
-        transform 180ms ease;
-}
-
-[data-testid="stSidebar"] .stButton > button:hover {
-    background: rgba(139, 92, 246, 0.09);
-    color: #ffffff;
-    border-color: rgba(139, 92, 246, 0.18);
-    transform: translateX(2px);
-}
-
-/* ============================================================
-   TOP BAR
-   ============================================================ */
-
-.ss-topbar {
-    height: 58px;
-
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-
-    margin-bottom: 22px;
-
-    padding: 0 4px;
-}
-
-.ss-topbar-command {
-    flex: 1;
-    max-width: 610px;
-
-    height: 43px;
-
-    display: flex;
-    align-items: center;
-    gap: 11px;
-
-    padding: 0 15px;
-
-    border: 1px solid rgba(148, 163, 184, 0.12);
-    border-radius: 12px;
-
-    background: rgba(11, 18, 32, 0.65);
-
-    color: #718096;
-
-    font-size: 13px;
-
-    transition:
-        border-color 180ms ease,
-        box-shadow 180ms ease;
-}
-
-.ss-topbar-command:hover {
-    border-color: rgba(139, 92, 246, 0.28);
+    border-bottom:
+        1px solid rgba(57, 255, 20, 0.20) !important;
 
     box-shadow:
-        0 0 0 3px rgba(139, 92, 246, 0.035);
+        0 5px 25px rgba(0, 0, 0, 0.28) !important;
+
+    backdrop-filter:
+        blur(18px) !important;
+
+    -webkit-backdrop-filter:
+        blur(18px) !important;
 }
 
-.ss-command-ai {
-    color: #a855f7;
-    font-size: 16px;
+
+/* ============================================================
+   TOP ROW
+   ============================================================ */
+
+.st-key-stylesense_top_row {
+
+    width: 100% !important;
+
+    height: 52px !important;
+
+    margin: 0 !important;
+
+    padding: 0 !important;
 }
 
-.ss-command-shortcut {
-    margin-left: auto;
 
-    padding: 3px 7px;
+.st-key-stylesense_top_row [data-testid="stHorizontalBlock"] {
 
-    border: 1px solid rgba(148, 163, 184, 0.12);
-    border-radius: 6px;
+    width: 100% !important;
 
-    color: #64748b;
+    height: 52px !important;
 
-    font-size: 10px;
+    display: flex !important;
+
+    flex-direction: row !important;
+
+    align-items: center !important;
+
+    gap: 5px !important;
 }
+
+
+.st-key-stylesense_top_row [data-testid="stColumn"] {
+
+    min-width: 0 !important;
+
+    padding: 0 !important;
+}
+
+
+/* ============================================================
+   TOP ROW BUTTON CONTAINERS
+   ============================================================ */
+
+.st-key-stylesense_top_row .stButton {
+
+    width: 100% !important;
+
+    margin: 0 !important;
+
+    padding: 0 !important;
+}
+
+
+.st-key-stylesense_top_row .stButton>button {
+
+    width: 100% !important;
+
+    height: 42px !important;
+
+    min-height: 42px !important;
+
+    padding:
+        5px 9px !important;
+
+    background:
+        transparent !important;
+
+    color:
+        #FFFFFF !important;
+
+    border:
+        1px solid transparent !important;
+
+    border-radius:
+        10px !important;
+
+    box-shadow:
+        none !important;
+
+    font-weight:
+        600 !important;
+
+    transition:
+        all 0.15s ease !important;
+}
+
+
+.st-key-stylesense_top_row .stButton>button:hover {
+
+    background:
+        rgba(57, 255, 20, 0.09) !important;
+
+    border-color:
+        rgba(57, 255, 20, 0.22) !important;
+
+    color:
+        #39FF14 !important;
+}
+
+
+.st-key-stylesense_top_row .stButton>button:focus {
+
+    outline: none !important;
+
+    box-shadow: none !important;
+}
+
+
+/* ============================================================
+   HAMBURGER
+   ============================================================ */
+
+.st-key-stylesense_top_row [data-testid="stColumn"]:nth-child(1) .stButton>button {
+
+    font-size:
+        27px !important;
+
+    font-weight:
+        400 !important;
+
+    padding:
+        0 !important;
+}
+
 
 /* ============================================================
    BRAND
    ============================================================ */
 
-.ss-brand {
-    padding: 4px 8px 18px;
+.st-key-stylesense_top_row [data-testid="stColumn"]:nth-child(2) .stButton>button {
+
+    text-align:
+        left !important;
+
+    font-size:
+        22px !important;
+
+    font-weight:
+        800 !important;
+
+    letter-spacing:
+        -0.6px !important;
 }
 
-.ss-brand-mark {
-    width: 34px;
-    height: 34px;
 
-    display: flex;
-    align-items: center;
-    justify-content: center;
+/* ============================================================
+   TOP RIGHT CONTROLS
+   ============================================================ */
 
-    border-radius: 10px;
+.st-key-stylesense_top_row [data-testid="stColumn"]:nth-child(4) .stButton>button,
+.st-key-stylesense_top_row [data-testid="stColumn"]:nth-child(5) .stButton>button,
+.st-key-stylesense_top_row [data-testid="stColumn"]:nth-child(6) .stButton>button {
+
+    font-size:
+        16px !important;
+
+    white-space:
+        nowrap !important;
+}
+
+
+/* ============================================================
+   MAIN NAVIGATION ROW
+   ============================================================ */
+
+.st-key-stylesense_navigation_row {
+
+    width: 100% !important;
+
+    height: 48px !important;
+
+    margin: 0 !important;
+
+    padding:
+        0 0 !important;
+
+    display: block !important;
+}
+
+
+/* ============================================================
+   NAVIGATION HORIZONTAL LAYOUT
+   ============================================================ */
+
+.st-key-stylesense_navigation_row [data-testid="stHorizontalBlock"] {
+
+    width: 100% !important;
+
+    height: 46px !important;
+
+    display: flex !important;
+
+    flex-direction: row !important;
+
+    align-items: center !important;
+
+    justify-content: center !important;
+
+    gap: 12px !important;
+
+    margin: 0 !important;
+}
+
+
+/* ============================================================
+   NAVIGATION COLUMNS
+   ============================================================ */
+
+.st-key-stylesense_navigation_row [data-testid="stColumn"] {
+
+    min-width: 0 !important;
+
+    padding: 0 !important;
+
+    flex: 1 1 0 !important;
+}
+
+
+/* ============================================================
+   NAVIGATION BUTTON WRAPPER
+   ============================================================ */
+
+.st-key-stylesense_navigation_row .stButton {
+
+    width: 100% !important;
+
+    margin: 0 !important;
+
+    padding: 0 !important;
+}
+
+
+/* ============================================================
+   NAVIGATION BUTTONS
+   ============================================================ */
+
+.st-key-stylesense_navigation_row .stButton>button {
+
+    width: 100% !important;
+
+    height: 42px !important;
+
+    min-height: 42px !important;
+
+    padding:
+        5px 18px !important;
+
+    border:
+        1px solid transparent !important;
+
+    border-radius:
+        10px !important;
 
     background:
-        linear-gradient(
-            135deg,
-            var(--ss-purple),
-            var(--ss-magenta)
-        );
+        transparent !important;
+
+    color:
+        #E5ECEE !important;
+
+    font-size:
+        16px !important;
+
+    font-weight:
+        650 !important;
 
     box-shadow:
-        0 8px 25px rgba(139, 92, 246, 0.22);
+        none !important;
 
-    color: white;
-    font-size: 18px;
-    font-weight: 800;
+    white-space:
+        nowrap !important;
+
+    transition:
+        all 0.18s ease !important;
 }
 
-.ss-brand-name {
-    margin-top: 10px;
-
-    color: #f8fafc;
-
-    font-size: 16px;
-    font-weight: 750;
-    letter-spacing: -0.3px;
-}
-
-.ss-brand-subtitle {
-    margin-top: 3px;
-
-    color: #64748b;
-
-    font-size: 10px;
-    line-height: 1.4;
-}
 
 /* ============================================================
-   SIDEBAR PROFILE
+   NAVIGATION HOVER
    ============================================================ */
 
-.ss-sidebar-profile {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-
-    margin: 4px 4px 16px;
-    padding: 11px;
-
-    border: 1px solid rgba(148, 163, 184, 0.10);
-    border-radius: 12px;
-
-    background: rgba(255, 255, 255, 0.025);
-}
-
-.ss-profile-avatar {
-    width: 34px;
-    height: 34px;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    flex-shrink: 0;
-
-    border-radius: 50%;
+.st-key-stylesense_navigation_row .stButton>button:hover {
 
     background:
-        linear-gradient(
-            135deg,
-            rgba(139, 92, 246, 0.85),
-            rgba(217, 70, 239, 0.75)
-        );
+        rgba(57, 255, 20, 0.10) !important;
 
-    color: white;
+    color:
+        #39FF14 !important;
 
-    font-size: 13px;
-    font-weight: 700;
+    border-color:
+        rgba(57, 255, 20, 0.22) !important;
+
+    transform:
+        translateY(-1px) !important;
 }
 
-.ss-profile-name {
-    color: #e8edf5;
-
-    font-size: 12px;
-    font-weight: 650;
-}
-
-.ss-profile-role {
-    margin-top: 2px;
-
-    color: #64748b;
-
-    font-size: 9px;
-}
 
 /* ============================================================
-   SIDEBAR SECTION LABEL
+   NAVIGATION FOCUS
    ============================================================ */
 
-.ss-sidebar-label {
-    margin: 17px 8px 7px;
+.st-key-stylesense_navigation_row .stButton>button:focus {
 
-    color: #475569;
-
-    font-size: 9px;
-    font-weight: 750;
-
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-}
-
-/* ============================================================
-   HERO
-   ============================================================ */
-
-.ss-hero {
-    position: relative;
-
-    min-height: 350px;
-
-    overflow: hidden;
-
-    padding: 36px 38px;
-
-    border: 1px solid rgba(148, 163, 184, 0.13);
-    border-radius: 20px;
-
-    background:
-        radial-gradient(
-            circle at 76% 30%,
-            rgba(139, 92, 246, 0.17),
-            transparent 30%
-        ),
-        radial-gradient(
-            circle at 95% 80%,
-            rgba(217, 70, 239, 0.08),
-            transparent 25%
-        ),
-        linear-gradient(
-            135deg,
-            #080d18,
-            #0a1020 55%,
-            #0c1120
-        );
+    outline:
+        none !important;
 
     box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.025);
+        none !important;
 }
 
-.ss-hero::before {
-    content: "";
-
-    position: absolute;
-
-    width: 420px;
-    height: 420px;
-
-    right: 100px;
-    top: -220px;
-
-    border-radius: 50%;
-
-    background: rgba(139, 92, 246, 0.08);
-
-    filter: blur(80px);
-}
-
-.ss-hero-content {
-    position: relative;
-    z-index: 2;
-
-    max-width: 640px;
-}
-
-.ss-eyebrow {
-    color: #8b5cf6;
-
-    font-size: 10px;
-    font-weight: 750;
-
-    letter-spacing: 2px;
-    text-transform: uppercase;
-}
-
-.ss-title {
-    margin-top: 10px;
-
-    color: #f8fafc;
-
-    font-size: clamp(36px, 4vw, 58px);
-    font-weight: 800;
-
-    line-height: 0.98;
-    letter-spacing: -2.8px;
-}
-
-.ss-title-gradient {
-    background:
-        linear-gradient(
-            90deg,
-            #a855f7,
-            #d946ef,
-            #8b5cf6
-        );
-
-    -webkit-background-clip: text;
-    background-clip: text;
-
-    color: transparent;
-}
-
-.ss-subtitle {
-    max-width: 560px;
-
-    margin-top: 15px;
-
-    color: #8996aa;
-
-    font-size: 14px;
-    line-height: 1.65;
-}
 
 /* ============================================================
-   HERO IMAGE
+   NAVIGATION ACTIVE PRESS
    ============================================================ */
 
-.ss-hero-image {
-    position: absolute;
+.st-key-stylesense_navigation_row .stButton>button:active {
 
-    right: -5px;
-    bottom: -25px;
-
-    width: 47%;
-    max-width: 540px;
-
-    height: 370px;
-
-    object-fit: cover;
-
-    object-position: center top;
-
-    opacity: 0.88;
-
-    mask-image:
-        linear-gradient(
-            to right,
-            transparent 0%,
-            black 35%,
-            black 100%
-        );
-
-    -webkit-mask-image:
-        linear-gradient(
-            to right,
-            transparent 0%,
-            black 35%,
-            black 100%
-        );
-}
-
-.ss-hero-image-overlay {
-    position: absolute;
-
-    inset: 0;
+    transform:
+        translateY(0) !important;
 
     background:
-        linear-gradient(
-            90deg,
-            #080d18 0%,
-            rgba(8, 13, 24, 0.82) 28%,
-            rgba(8, 13, 24, 0.08) 70%
-        );
+        rgba(57, 255, 20, 0.14) !important;
 }
 
+
 /* ============================================================
-   AI COMMAND BAR
+   CUSTOM SIDEBAR
    ============================================================ */
 
-.ss-ai-command {
-    margin-top: 25px;
+.st-key-stylesense_sidebar_open {
 
-    max-width: 680px;
+    position: fixed !important;
 
-    padding: 5px;
+    top: 116px !important;
 
-    display: flex;
-    align-items: center;
+    left: 0 !important;
 
-    border: 1px solid rgba(139, 92, 246, 0.25);
-    border-radius: 13px;
+    bottom: 0 !important;
 
-    background: rgba(5, 9, 20, 0.72);
+    width: 290px !important;
+
+    max-width: 290px !important;
+
+    z-index: 999980 !important;
+
+    overflow-y: auto !important;
+
+    overflow-x: hidden !important;
+
+    padding:
+        18px 14px 35px 14px !important;
+
+    background:
+        linear-gradient(180deg,
+            #263238 0%,
+            #263238 75%,
+            #1F292D 100%) !important;
+
+    border-right:
+        1px solid rgba(57, 255, 20, 0.25) !important;
 
     box-shadow:
-        0 0 30px rgba(139, 92, 246, 0.07);
+        8px 0 30px rgba(0, 0, 0, 0.40) !important;
+
+    animation:
+        stylesenseSidebarOpen 0.18s ease-out !important;
 }
 
-.ss-ai-command-placeholder {
-    flex: 1;
 
-    padding: 11px 13px;
+/* ============================================================
+   SIDEBAR ANIMATION
+   ============================================================ */
 
-    color: #64748b;
+@keyframes stylesenseSidebarOpen {
 
-    font-size: 12px;
+    from {
+
+        transform:
+            translateX(-20px);
+
+        opacity:
+            0.7;
+    }
+
+    to {
+
+        transform:
+            translateX(0);
+
+        opacity:
+            1;
+    }
 }
 
-.ss-ai-button {
-    padding: 10px 17px;
 
-    border-radius: 9px;
+/* ============================================================
+   SIDEBAR SCROLLBAR
+   ============================================================ */
+
+.st-key-stylesense_sidebar_open::-webkit-scrollbar {
+
+    width:
+        5px;
+}
+
+
+.st-key-stylesense_sidebar_open::-webkit-scrollbar-track {
 
     background:
-        linear-gradient(
-            135deg,
-            #8b5cf6,
-            #a855f7
-        );
+        transparent;
+}
 
-    color: white;
 
-    font-size: 11px;
-    font-weight: 700;
+.st-key-stylesense_sidebar_open::-webkit-scrollbar-thumb {
+
+    background:
+        rgba(57, 255, 20, 0.30);
+
+    border-radius:
+        10px;
+}
+
+
+/* ============================================================
+   SIDEBAR BRAND
+   ============================================================ */
+
+.stylesense-sidebar-brand {
+
+    margin:
+        3px 6px 0 6px !important;
+
+    color:
+        #FFFFFF !important;
+
+    font-size:
+        24px !important;
+
+    font-weight:
+        800 !important;
+
+    letter-spacing:
+        -0.6px !important;
+}
+
+
+.stylesense-sidebar-brand span {
+
+    color:
+        #39FF14 !important;
+}
+
+
+.stylesense-sidebar-tagline {
+
+    margin:
+        0 6px 17px 6px !important;
+
+    color:
+        #AAB7BB !important;
+
+    font-size:
+        10px !important;
+}
+
+
+/* ============================================================
+   SIDEBAR HEADER
+   ============================================================ */
+
+.st-key-stylesense_sidebar_open [data-testid="stHorizontalBlock"] .stButton>button {
+
+    min-height:
+        36px !important;
+
+    height:
+        36px !important;
+
+    padding:
+        0 !important;
+
+    border:
+        none !important;
+
+    background:
+        transparent !important;
+
+    color:
+        #AAB7BB !important;
+
+    font-size:
+        18px !important;
+}
+
+
+.st-key-stylesense_sidebar_open [data-testid="stHorizontalBlock"] .stButton>button:hover {
+
+    color:
+        #39FF14 !important;
+
+    background:
+        rgba(57, 255, 20, 0.08) !important;
+}
+
+
+/* ============================================================
+   SIDEBAR SECTION HEADERS
+   ============================================================ */
+
+.stylesense-sidebar-section {
+
+    margin-top:
+        17px !important;
+
+    margin-bottom:
+        7px !important;
+
+    padding:
+        5px 6px !important;
+
+    color:
+        #8DFF70 !important;
+
+    font-size:
+        10px !important;
+
+    font-weight:
+        800 !important;
+
+    letter-spacing:
+        1.1px !important;
+
+    text-transform:
+        uppercase !important;
+}
+
+
+/* ============================================================
+   SIDEBAR BUTTONS
+   ============================================================ */
+
+.st-key-stylesense_sidebar_open .stButton {
+
+    width:
+        100% !important;
+
+    margin:
+        0 !important;
+
+    padding:
+        0 !important;
+}
+
+
+.st-key-stylesense_sidebar_open .stButton>button {
+
+    width:
+        100% !important;
+
+    min-height:
+        42px !important;
+
+    height:
+        auto !important;
+
+    margin-bottom:
+        5px !important;
+
+    padding:
+        8px 12px !important;
+
+    text-align:
+        left !important;
+
+    color:
+        #FFFFFF !important;
+
+    background:
+        rgba(255, 255, 255, 0.025) !important;
+
+    border:
+        1px solid rgba(255, 255, 255, 0.045) !important;
+
+    border-radius:
+        10px !important;
 
     box-shadow:
-        0 6px 20px rgba(139, 92, 246, 0.18);
-}
-
-/* ============================================================
-   STATS
-   ============================================================ */
-
-.ss-stat-card {
-    position: relative;
-
-    padding: 17px;
-
-    min-height: 104px;
-
-    border: 1px solid rgba(148, 163, 184, 0.10);
-    border-radius: 14px;
-
-    background: rgba(11, 18, 32, 0.74);
+        none !important;
 
     transition:
-        transform 180ms ease,
-        border-color 180ms ease;
+        all 0.15s ease !important;
 }
 
-.ss-stat-card:hover {
-    transform: translateY(-2px);
 
-    border-color: rgba(139, 92, 246, 0.25);
-}
+.st-key-stylesense_sidebar_open .stButton>button:hover {
 
-.ss-stat-icon {
-    font-size: 14px;
-}
-
-.ss-stat-number {
-    margin-top: 9px;
-
-    color: #f8fafc;
-
-    font-size: 25px;
-    font-weight: 800;
-
-    letter-spacing: -1px;
-}
-
-.ss-stat-label {
-    margin-top: 1px;
-
-    color: #64748b;
-
-    font-size: 10px;
-}
-
-/* ============================================================
-   SECTION HEADER
-   ============================================================ */
-
-.ss-section {
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-
-    margin-top: 35px;
-    margin-bottom: 15px;
-}
-
-.ss-section-title {
-    color: #f1f5f9;
-
-    font-size: 18px;
-    font-weight: 750;
-
-    letter-spacing: -0.35px;
-}
-
-.ss-section-subtitle {
-    margin-top: 3px;
-
-    color: #64748b;
-
-    font-size: 11px;
-}
-
-.ss-section-link {
-    color: #a78bfa;
-
-    font-size: 11px;
-    font-weight: 600;
-}
-
-/* ============================================================
-   QUICK ACTIONS
-   ============================================================ */
-
-.ss-action-card {
-    position: relative;
-
-    min-height: 145px;
-
-    overflow: hidden;
-
-    padding: 20px;
-
-    border: 1px solid rgba(148, 163, 184, 0.11);
-    border-radius: 15px;
+    color:
+        #39FF14 !important;
 
     background:
-        linear-gradient(
-            145deg,
-            rgba(255, 255, 255, 0.035),
-            rgba(255, 255, 255, 0.012)
-        );
+        rgba(57, 255, 20, 0.10) !important;
 
-    transition:
-        transform 200ms ease,
-        border-color 200ms ease,
-        box-shadow 200ms ease;
+    border-color:
+        rgba(57, 255, 20, 0.28) !important;
+
+    transform:
+        translateX(2px) !important;
 }
 
-.ss-action-card:hover {
-    transform: translateY(-4px);
 
-    border-color: rgba(139, 92, 246, 0.28);
+.st-key-stylesense_sidebar_open .stButton>button:focus {
+
+    outline:
+        none !important;
 
     box-shadow:
-        0 15px 35px rgba(0, 0, 0, 0.22),
-        0 0 25px rgba(139, 92, 246, 0.06);
+        none !important;
 }
 
-.ss-action-icon {
-    width: 38px;
-    height: 38px;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    border-radius: 11px;
-
-    background: rgba(139, 92, 246, 0.12);
-
-    color: #a78bfa;
-
-    font-size: 17px;
-}
-
-.ss-action-title {
-    margin-top: 17px;
-
-    color: #f1f5f9;
-
-    font-size: 13px;
-    font-weight: 700;
-}
-
-.ss-action-description {
-    max-width: 180px;
-
-    margin-top: 5px;
-
-    color: #64748b;
-
-    font-size: 10px;
-    line-height: 1.5;
-}
-
-.ss-action-arrow {
-    position: absolute;
-
-    right: 16px;
-    bottom: 15px;
-
-    color: #475569;
-
-    font-size: 14px;
-}
 
 /* ============================================================
-   AI TEAM
+   GENERAL BUTTONS
    ============================================================ */
 
-.ss-agent-card {
-    padding: 19px;
-
-    min-height: 155px;
-
-    border: 1px solid rgba(148, 163, 184, 0.11);
-    border-radius: 15px;
-
-    background:
-        linear-gradient(
-            145deg,
-            rgba(16, 24, 39, 0.9),
-            rgba(11, 18, 32, 0.82)
-        );
+.stButton>button {
 
     transition:
-        transform 180ms ease,
-        border-color 180ms ease;
+        all 0.15s ease !important;
 }
 
-.ss-agent-card:hover {
-    transform: translateY(-3px);
-
-    border-color: rgba(139, 92, 246, 0.25);
-}
-
-.ss-agent-top {
-    display: flex;
-    align-items: center;
-    gap: 11px;
-}
-
-.ss-agent-avatar {
-    position: relative;
-
-    width: 43px;
-    height: 43px;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    flex-shrink: 0;
-
-    border-radius: 50%;
-
-    background:
-        linear-gradient(
-            135deg,
-            rgba(139, 92, 246, 0.30),
-            rgba(217, 70, 239, 0.15)
-        );
-
-    border: 1px solid rgba(139, 92, 246, 0.40);
-
-    font-size: 18px;
-}
-
-.ss-online {
-    position: absolute;
-
-    width: 8px;
-    height: 8px;
-
-    right: 0;
-    bottom: 1px;
-
-    border: 2px solid #0b1220;
-
-    border-radius: 50%;
-
-    background: #10b981;
-}
-
-.ss-agent-name {
-    color: #e2e8f0;
-
-    font-size: 12px;
-    font-weight: 700;
-}
-
-.ss-agent-role {
-    margin-top: 3px;
-
-    color: #64748b;
-
-    font-size: 9px;
-}
-
-.ss-agent-description {
-    margin-top: 17px;
-
-    color: #64748b;
-
-    font-size: 10px;
-    line-height: 1.5;
-}
 
 /* ============================================================
-   PROJECT CARDS
+   INPUTS
    ============================================================ */
 
-.ss-project-card {
-    overflow: hidden;
-
-    border: 1px solid rgba(148, 163, 184, 0.11);
-    border-radius: 15px;
-
-    background: #0b1220;
-}
-
-.ss-project-image {
-    width: 100%;
-    height: 155px;
-
-    object-fit: cover;
-
-    display: block;
-}
-
-.ss-project-body {
-    padding: 15px;
-}
-
-.ss-project-name {
-    color: #f1f5f9;
-
-    font-size: 13px;
-    font-weight: 700;
-}
-
-.ss-project-meta {
-    margin-top: 5px;
-
-    color: #64748b;
-
-    font-size: 10px;
-}
-
-.ss-progress {
-    height: 4px;
-
-    margin-top: 13px;
-
-    overflow: hidden;
-
-    border-radius: 20px;
-
-    background: rgba(148, 163, 184, 0.09);
-}
-
-.ss-progress-fill {
-    height: 100%;
-
-    border-radius: inherit;
-
-    background:
-        linear-gradient(
-            90deg,
-            #8b5cf6,
-            #d946ef
-        );
-}
-
-/* ============================================================
-   DESIGN CARDS
-   ============================================================ */
-
-.ss-design-card {
-    overflow: hidden;
-
-    border: 1px solid rgba(148, 163, 184, 0.10);
-    border-radius: 14px;
-
-    background: #0b1220;
-
-    transition:
-        transform 180ms ease,
-        border-color 180ms ease;
-}
-
-.ss-design-card:hover {
-    transform: translateY(-3px);
-
-    border-color: rgba(139, 92, 246, 0.25);
-}
-
-.ss-design-image {
-    width: 100%;
-    height: 235px;
-
-    display: block;
-
-    object-fit: cover;
-
-    transition: transform 300ms ease;
-}
-
-.ss-design-card:hover .ss-design-image {
-    transform: scale(1.035);
-}
-
-.ss-design-info {
-    padding: 12px;
-}
-
-.ss-design-name {
-    overflow: hidden;
-
-    color: #e2e8f0;
-
-    font-size: 11px;
-    font-weight: 650;
-
-    white-space: nowrap;
-    text-overflow: ellipsis;
-}
-
-.ss-design-mode {
-    margin-top: 4px;
-
-    color: #64748b;
-
-    font-size: 9px;
-}
-
-/* ============================================================
-   INTELLIGENCE CARDS
-   ============================================================ */
-
-.ss-intelligence-card {
-    min-height: 320px;
-
-    padding: 19px;
-
-    border: 1px solid rgba(148, 163, 184, 0.11);
-    border-radius: 15px;
-
-    background: rgba(11, 18, 32, 0.82);
-}
-
-.ss-intelligence-title {
-    color: #f1f5f9;
-
-    font-size: 14px;
-    font-weight: 700;
-}
-
-.ss-intelligence-subtitle {
-    margin-top: 4px;
-
-    color: #64748b;
-
-    font-size: 10px;
-}
-
-.ss-insight {
-    margin-top: 17px;
-    padding-bottom: 13px;
-
-    border-bottom: 1px solid rgba(148, 163, 184, 0.08);
-}
-
-.ss-insight:last-child {
-    border-bottom: 0;
-}
-
-.ss-insight-title {
-    color: #dbe4f0;
-
-    font-size: 11px;
-    font-weight: 650;
-}
-
-.ss-insight-description {
-    margin-top: 4px;
-
-    color: #64748b;
-
-    font-size: 10px;
-    line-height: 1.5;
-}
-
-/* ============================================================
-   TREND ROW
-   ============================================================ */
-
-.ss-trend-row {
-    display: flex;
-    align-items: center;
-
-    padding: 12px 0;
-
-    border-bottom: 1px solid rgba(148, 163, 184, 0.07);
-}
-
-.ss-trend-rank {
-    width: 28px;
-
-    color: #475569;
-
-    font-size: 10px;
-    font-weight: 700;
-}
-
-.ss-trend-name {
-    flex: 1;
-
-    color: #cbd5e1;
-
-    font-size: 11px;
-}
-
-.ss-trend-percent {
-    color: #10b981;
-
-    font-size: 10px;
-    font-weight: 700;
-}
-
-/* ============================================================
-   TASKS
-   ============================================================ */
-
-.ss-task {
-    display: flex;
-    gap: 10px;
-
-    padding: 12px 0;
-
-    border-bottom: 1px solid rgba(148, 163, 184, 0.07);
-}
-
-.ss-task-check {
-    width: 15px;
-    height: 15px;
-
-    flex-shrink: 0;
-
-    margin-top: 1px;
-
-    border: 1px solid #475569;
-    border-radius: 4px;
-}
-
-.ss-task-title {
-    color: #cbd5e1;
-
-    font-size: 10px;
-    font-weight: 600;
-}
-
-.ss-task-context {
-    margin-top: 3px;
-
-    color: #475569;
-
-    font-size: 9px;
-}
-
-/* ============================================================
-   CONTINUE CARDS
-   ============================================================ */
-
-.ss-continue {
-    min-height: 125px;
-
-    padding: 18px;
-
-    border: 1px solid rgba(148, 163, 184, 0.10);
-    border-radius: 14px;
-
-    background:
-        linear-gradient(
-            135deg,
-            rgba(139, 92, 246, 0.08),
-            rgba(255, 255, 255, 0.018)
-        );
-
-    transition:
-        transform 180ms ease,
-        border-color 180ms ease;
-}
-
-.ss-continue:hover {
-    transform: translateY(-3px);
-
-    border-color: rgba(139, 92, 246, 0.25);
-}
-
-.ss-continue-icon {
-    font-size: 20px;
-}
-
-.ss-continue-title {
-    margin-top: 13px;
-
-    color: #e2e8f0;
-
-    font-size: 12px;
-    font-weight: 700;
-}
-
-.ss-continue-description {
-    margin-top: 4px;
-
-    color: #64748b;
-
-    font-size: 9px;
-}
-
-/* ============================================================
-   STREAMLIT INPUTS
-   ============================================================ */
-
-div[data-baseweb="input"],
-div[data-baseweb="textarea"] {
-    border-radius: 11px !important;
-}
-
-div[data-baseweb="input"] > div,
-div[data-baseweb="textarea"] > div {
-    background: rgba(11, 18, 32, 0.72) !important;
-
-    border-color: rgba(148, 163, 184, 0.13) !important;
-}
-
+input,
 textarea,
-input {
-    color: #e2e8f0 !important;
+select {
+
+    font-size:
+        16px !important;
 }
+
 
 /* ============================================================
-   BUTTONS
+   IMAGES
    ============================================================ */
 
-.stButton > button {
-    border-radius: 10px;
+img {
 
-    border: 1px solid rgba(148, 163, 184, 0.12);
+    max-width:
+        100% !important;
 
-    background: rgba(255, 255, 255, 0.035);
-
-    color: #cbd5e1;
-
-    font-size: 11px;
-    font-weight: 600;
-
-    transition:
-        transform 180ms ease,
-        border-color 180ms ease,
-        background 180ms ease,
-        box-shadow 180ms ease;
+    height:
+        auto !important;
 }
 
-.stButton > button:hover {
-    transform: translateY(-1px);
 
-    border-color: rgba(139, 92, 246, 0.35);
+/* ============================================================
+   HORIZONTAL BLOCKS
+   ============================================================ */
 
-    background: rgba(139, 92, 246, 0.10);
+[data-testid="stHorizontalBlock"] {
 
-    color: white;
-
-    box-shadow:
-        0 7px 22px rgba(139, 92, 246, 0.08);
+    max-width:
+        100% !important;
 }
 
-/* Primary */
 
-.stButton > button[kind="primary"] {
-    border: 0;
+/* ============================================================
+   DATAFRAMES
+   ============================================================ */
+
+[data-testid="stDataFrame"] {
+
+    max-width:
+        100% !important;
+
+    overflow-x:
+        auto !important;
+}
+
+
+/* ============================================================
+   FILE UPLOADER
+   ============================================================ */
+
+[data-testid="stFileUploader"] {
+
+    max-width:
+        100% !important;
+}
+
+
+/* ============================================================
+   ALERTS
+   ============================================================ */
+
+[data-testid="stAlert"] {
+
+    max-width:
+        100% !important;
+}
+
+
+/* ============================================================
+   STYLESENSE CARD
+   ============================================================ */
+
+.stylesense-card {
+
+    width:
+        100%;
+
+    padding:
+        20px;
+
+    border-radius:
+        16px;
 
     background:
-        linear-gradient(
-            135deg,
-            #8b5cf6,
-            #a855f7
-        );
+        rgba(255, 255, 255, 0.06);
 
-    color: white;
+    border:
+        1px solid rgba(255, 255, 255, 0.10);
 
     box-shadow:
-        0 8px 25px rgba(139, 92, 246, 0.15);
+        0 10px 30px rgba(0, 0, 0, 0.16);
+
+    backdrop-filter:
+        blur(10px);
+
+    -webkit-backdrop-filter:
+        blur(10px);
 }
 
-/* ============================================================
-   DIVIDERS
-   ============================================================ */
-
-hr {
-    border-color: rgba(148, 163, 184, 0.08) !important;
-}
 
 /* ============================================================
    MOBILE
    ============================================================ */
 
-@media (max-width: 900px) {
+@media (max-width: 768px) {
 
-    [data-testid="stSidebar"] {
-        min-width: 210px;
-        max-width: 210px;
+
+    /* ========================================================
+       TOP BAR
+       ======================================================== */
+
+    .st-key-stylesense_topbar {
+
+        height:
+            112px !important;
+
+        padding:
+            6px 7px !important;
     }
+
+
+    .st-key-stylesense_top_row {
+
+        height:
+            48px !important;
+    }
+
+
+    .st-key-stylesense_top_row [data-testid="stHorizontalBlock"] {
+
+        height:
+            48px !important;
+
+        gap:
+            2px !important;
+    }
+
+
+    /* ========================================================
+       BRAND
+       ======================================================== */
+
+    .st-key-stylesense_top_row [data-testid="stColumn"]:nth-child(2) .stButton>button {
+
+        font-size:
+            17px !important;
+
+        padding:
+            3px !important;
+    }
+
+
+    /* ========================================================
+       RIGHT ICONS
+       ======================================================== */
+
+    .st-key-stylesense_top_row [data-testid="stColumn"]:nth-child(4) .stButton>button,
+    .st-key-stylesense_top_row [data-testid="stColumn"]:nth-child(5) .stButton>button,
+    .st-key-stylesense_top_row [data-testid="stColumn"]:nth-child(6) .stButton>button {
+
+        font-size:
+            0 !important;
+    }
+
+
+    .st-key-stylesense_top_row [data-testid="stColumn"]:nth-child(4) .stButton>button::after {
+
+        content:
+            "🔔";
+
+        font-size:
+            18px;
+    }
+
+
+    .st-key-stylesense_top_row [data-testid="stColumn"]:nth-child(5) .stButton>button::after {
+
+        content:
+            "👤";
+
+        font-size:
+            18px;
+    }
+
+
+    .st-key-stylesense_top_row [data-testid="stColumn"]:nth-child(6) .stButton>button::after {
+
+        content:
+            "◐";
+
+        font-size:
+            18px;
+    }
+
+
+    /* ========================================================
+       SECOND NAVIGATION
+       ======================================================== */
+
+    .st-key-stylesense_navigation_row {
+
+        height:
+            49px !important;
+
+        overflow-x:
+            auto !important;
+
+        overflow-y:
+            hidden !important;
+    }
+
+
+    .st-key-stylesense_navigation_row [data-testid="stHorizontalBlock"] {
+
+        width:
+            100% !important;
+
+        height:
+            43px !important;
+
+        display:
+            flex !important;
+
+        flex-direction:
+            row !important;
+
+        gap:
+            3px !important;
+
+        justify-content:
+            center !important;
+    }
+
+
+    .st-key-stylesense_navigation_row [data-testid="stColumn"] {
+
+        flex:
+            1 1 0 !important;
+
+        min-width:
+            0 !important;
+
+        padding:
+            0 !important;
+    }
+
+
+    .st-key-stylesense_navigation_row .stButton>button {
+
+        height:
+            38px !important;
+
+        min-height:
+            38px !important;
+
+        padding:
+            3px 4px !important;
+
+        font-size:
+            12px !important;
+
+        font-weight:
+            600 !important;
+
+        border-radius:
+            8px !important;
+    }
+
+
+    /* ========================================================
+       MAIN CONTENT
+       ======================================================== */
 
     .main .block-container {
-        padding-left: 1.2rem;
-        padding-right: 1.2rem;
+
+        padding-top:
+            125px !important;
+
+        padding-right:
+            14px !important;
+
+        padding-bottom:
+            30px !important;
+
+        padding-left:
+            14px !important;
     }
 
-    .ss-hero {
-        min-height: 430px;
-        padding: 28px 24px;
+
+    /* ========================================================
+       MOBILE SIDEBAR
+       ======================================================== */
+
+    .st-key-stylesense_sidebar_open {
+
+        top:
+            112px !important;
+
+        width:
+            310px !important;
+
+        max-width:
+            86vw !important;
+
+        padding:
+            16px 12px 30px 12px !important;
     }
 
-    .ss-hero-image {
-        width: 80%;
-        height: 300px;
 
-        right: -30px;
-        bottom: -30px;
+    /* ========================================================
+       MOBILE HEADINGS
+       ======================================================== */
 
-        opacity: 0.48;
+    h1 {
+
+        font-size:
+            28px !important;
+
+        line-height:
+            1.15 !important;
     }
 
-    .ss-hero-image-overlay {
-        background:
-            linear-gradient(
-                180deg,
-                #080d18 10%,
-                rgba(8, 13, 24, 0.80) 58%,
-                rgba(8, 13, 24, 0.30)
-            );
+
+    h2 {
+
+        font-size:
+            23px !important;
+
+        line-height:
+            1.2 !important;
     }
 
-    .ss-title {
-        font-size: 40px;
+
+    h3 {
+
+        font-size:
+            19px !important;
+
+        line-height:
+            1.25 !important;
+    }
+
+
+    /* ========================================================
+       MOBILE BUTTONS
+       ======================================================== */
+
+    .stButton>button {
+
+        min-height:
+            44px !important;
+
+        border-radius:
+            11px !important;
     }
 }
 
-@media (max-width: 640px) {
 
-    [data-testid="stSidebar"] {
-        display: none;
-    }
+/* ============================================================
+   TABLET
+   ============================================================ */
+
+@media (min-width: 769px) and (max-width: 1100px) {
+
 
     .main .block-container {
-        padding:
-            0.8rem
-            0.9rem
-            4rem;
+
+        padding-right:
+            28px !important;
+
+        padding-left:
+            28px !important;
     }
 
-    .ss-topbar-command {
-        max-width: 100%;
+
+    .st-key-stylesense_topbar {
+
+        padding-right:
+            10px !important;
+
+        padding-left:
+            10px !important;
     }
 
-    .ss-hero {
-        min-height: 465px;
 
-        border-radius: 17px;
+    .st-key-stylesense_navigation_row .stButton>button {
 
-        padding: 25px 21px;
+        font-size:
+            14px !important;
+
+        padding-left:
+            8px !important;
+
+        padding-right:
+            8px !important;
     }
+}
 
-    .ss-title {
-        font-size: 36px;
-        letter-spacing: -1.8px;
-    }
 
-    .ss-subtitle {
-        font-size: 13px;
-    }
+/* ============================================================
+   ACCESSIBILITY
+   ============================================================ */
 
-    .ss-hero-image {
-        width: 100%;
-        height: 285px;
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
 
-        right: -35px;
-        bottom: -25px;
+    outline:
+        2px solid rgba(57, 255, 20, 0.65) !important;
 
-        opacity: 0.40;
-    }
-
-    .ss-section {
-        margin-top: 28px;
-    }
-
-    .ss-action-card {
-        min-height: 125px;
-    }
-
-    .ss-agent-card {
-        min-height: 130px;
-    }
-
-    .ss-design-image {
-        height: 210px;
-    }
+    outline-offset:
+        2px !important;
 }
