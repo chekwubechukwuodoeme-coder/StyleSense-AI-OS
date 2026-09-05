@@ -1,16 +1,15 @@
 /* ============================================================
    STYLESENSE AI OS
-   GLOBAL NAVIGATION + LAYOUT
+   GLOBAL RESPONSIVE LAYOUT
    ============================================================ */
 
 
 /* ============================================================
-   RESET
+   GLOBAL RESET
    ============================================================ */
 
 html,
 body {
-
     margin: 0 !important;
     padding: 0 !important;
 
@@ -19,7 +18,6 @@ body {
 
     overflow-x: hidden !important;
 }
-
 
 * {
     box-sizing: border-box;
@@ -27,699 +25,107 @@ body {
 
 
 /* ============================================================
-   APP
+   STREAMLIT APP
    ============================================================ */
 
 .stApp {
-
+    width: 100% !important;
     min-height: 100vh !important;
-
-    background:
-        radial-gradient(circle at 8% 8%,
-            rgba(245, 166, 35, 0.30),
-            transparent 25%),
-
-        radial-gradient(circle at 90% 12%,
-            rgba(57, 255, 20, 0.16),
-            transparent 25%),
-
-        radial-gradient(circle at 15% 85%,
-            rgba(0, 107, 69, 0.28),
-            transparent 30%),
-
-        linear-gradient(135deg,
-            #263238 0%,
-            #263238 30%,
-            #006B45 55%,
-            #263238 75%,
-            #F5A623 100%) !important;
-
-    background-attachment: fixed !important;
-}
-
-
-[data-testid="stAppViewContainer"] {
-
-    width: 100% !important;
-    max-width: 100% !important;
-
-    background: transparent !important;
-
-    overflow-x: hidden !important;
-}
-
-
-[data-testid="stMain"] {
-
-    width: 100% !important;
-    max-width: 100% !important;
-
-    background: transparent !important;
-
-    overflow-x: hidden !important;
-}
-
-
-[data-testid="stMainBlockContainer"] {
-
-    width: 100% !important;
-    max-width: 100% !important;
-
-    margin-left: 0 !important;
-
     overflow-x: hidden !important;
 }
 
 
 /* ============================================================
-   REMOVE STREAMLIT NATIVE SIDEBAR
-   ============================================================ */
-
-section[data-testid="stSidebar"] {
-
-    display: none !important;
-}
-
-
-[data-testid="stSidebarCollapsedControl"] {
-
-    display: none !important;
-}
-
-
-/* ============================================================
-   REMOVE STREAMLIT HEADER
+   REMOVE STREAMLIT DEFAULT TOP HEADER
    ============================================================ */
 
 header[data-testid="stHeader"] {
+    background: transparent !important;
+    height: 0 !important;
+    min-height: 0 !important;
+}
 
+[data-testid="stToolbar"] {
+    display: none !important;
+}
+
+[data-testid="stDecoration"] {
     display: none !important;
 }
 
 
-#MainMenu {
+/* ============================================================
+   REMOVE DEFAULT STREAMLIT SIDEBAR NAVIGATION
+   ============================================================ */
 
-    visibility: hidden !important;
-}
-
-
-footer {
-
-    visibility: hidden !important;
+[data-testid="stSidebarNav"] {
+    display: none !important;
 }
 
 
 /* ============================================================
-   MAIN CONTENT
+   NATIVE SIDEBAR
    ============================================================ */
 
-.main .block-container {
-
-    width: 100% !important;
-    max-width: 100% !important;
-
-    margin-left: 0 !important;
-
-    padding-top: 128px !important;
-
-    padding-right: 40px !important;
-    padding-bottom: 40px !important;
-    padding-left: 40px !important;
-}
-
-
-/* ============================================================
-   TOP HEADER
-   ============================================================ */
-
-.st-key-stylesense_topbar {
-
-    position: fixed !important;
-
-    top: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-
-    width: 100% !important;
-
-    height: 116px !important;
-
-    z-index: 999990 !important;
-
-    padding:
-        8px 22px 6px 22px !important;
-
-    background:
-        rgba(31, 41, 45, 0.98) !important;
-
-    border-bottom:
-        1px solid rgba(57, 255, 20, 0.20) !important;
-
-    box-shadow:
-        0 5px 25px rgba(0, 0, 0, 0.28) !important;
-
-    backdrop-filter:
-        blur(18px) !important;
-
-    -webkit-backdrop-filter:
-        blur(18px) !important;
-}
-
-
-/* ============================================================
-   TOP ROW
-   ============================================================ */
-
-.st-key-stylesense_top_row {
-
-    width: 100% !important;
-
-    height: 52px !important;
-
-    margin: 0 !important;
-
-    padding: 0 !important;
-}
-
-
-.st-key-stylesense_top_row [data-testid="stHorizontalBlock"] {
-
-    width: 100% !important;
-
-    height: 52px !important;
-
-    display: flex !important;
-
-    flex-direction: row !important;
-
-    align-items: center !important;
-
-    gap: 5px !important;
-}
-
-
-.st-key-stylesense_top_row [data-testid="stColumn"] {
-
-    min-width: 0 !important;
-
-    padding: 0 !important;
-}
-
-
-/* ============================================================
-   TOP ROW BUTTON CONTAINERS
-   ============================================================ */
-
-.st-key-stylesense_top_row .stButton {
-
-    width: 100% !important;
-
-    margin: 0 !important;
-
-    padding: 0 !important;
-}
-
-
-.st-key-stylesense_top_row .stButton>button {
-
-    width: 100% !important;
-
-    height: 42px !important;
-
-    min-height: 42px !important;
-
-    padding:
-        5px 9px !important;
-
-    background:
-        transparent !important;
-
-    color:
-        #FFFFFF !important;
-
-    border:
-        1px solid transparent !important;
-
-    border-radius:
-        10px !important;
-
-    box-shadow:
-        none !important;
-
-    font-weight:
-        600 !important;
-
-    transition:
-        all 0.15s ease !important;
-}
-
-
-.st-key-stylesense_top_row .stButton>button:hover {
-
-    background:
-        rgba(57, 255, 20, 0.09) !important;
-
-    border-color:
-        rgba(57, 255, 20, 0.22) !important;
-
-    color:
-        #39FF14 !important;
-}
-
-
-.st-key-stylesense_top_row .stButton>button:focus {
-
-    outline: none !important;
-
-    box-shadow: none !important;
-}
-
-
-/* ============================================================
-   HAMBURGER
-   ============================================================ */
-
-.st-key-stylesense_top_row [data-testid="stColumn"]:nth-child(1) .stButton>button {
-
-    font-size:
-        27px !important;
-
-    font-weight:
-        400 !important;
-
-    padding:
-        0 !important;
-}
-
-
-/* ============================================================
-   BRAND
-   ============================================================ */
-
-.st-key-stylesense_top_row [data-testid="stColumn"]:nth-child(2) .stButton>button {
-
-    text-align:
-        left !important;
-
-    font-size:
-        22px !important;
-
-    font-weight:
-        800 !important;
-
-    letter-spacing:
-        -0.6px !important;
-}
-
-
-/* ============================================================
-   TOP RIGHT CONTROLS
-   ============================================================ */
-
-.st-key-stylesense_top_row [data-testid="stColumn"]:nth-child(4) .stButton>button,
-.st-key-stylesense_top_row [data-testid="stColumn"]:nth-child(5) .stButton>button,
-.st-key-stylesense_top_row [data-testid="stColumn"]:nth-child(6) .stButton>button {
-
-    font-size:
-        16px !important;
-
-    white-space:
-        nowrap !important;
-}
-
-
-/* ============================================================
-   MAIN NAVIGATION ROW
-   ============================================================ */
-
-.st-key-stylesense_navigation_row {
-
-    width: 100% !important;
-
-    height: 48px !important;
-
-    margin: 0 !important;
-
-    padding:
-        0 0 !important;
-
-    display: block !important;
-}
-
-
-/* ============================================================
-   NAVIGATION HORIZONTAL LAYOUT
-   ============================================================ */
-
-.st-key-stylesense_navigation_row [data-testid="stHorizontalBlock"] {
-
-    width: 100% !important;
-
-    height: 46px !important;
-
-    display: flex !important;
-
-    flex-direction: row !important;
-
-    align-items: center !important;
-
-    justify-content: center !important;
-
-    gap: 12px !important;
-
-    margin: 0 !important;
-}
-
-
-/* ============================================================
-   NAVIGATION COLUMNS
-   ============================================================ */
-
-.st-key-stylesense_navigation_row [data-testid="stColumn"] {
-
-    min-width: 0 !important;
-
-    padding: 0 !important;
-
-    flex: 1 1 0 !important;
-}
-
-
-/* ============================================================
-   NAVIGATION BUTTON WRAPPER
-   ============================================================ */
-
-.st-key-stylesense_navigation_row .stButton {
-
-    width: 100% !important;
-
-    margin: 0 !important;
-
-    padding: 0 !important;
-}
-
-
-/* ============================================================
-   NAVIGATION BUTTONS
-   ============================================================ */
-
-.st-key-stylesense_navigation_row .stButton>button {
-
-    width: 100% !important;
-
-    height: 42px !important;
-
-    min-height: 42px !important;
-
-    padding:
-        5px 18px !important;
-
-    border:
-        1px solid transparent !important;
-
-    border-radius:
-        10px !important;
-
-    background:
-        transparent !important;
-
-    color:
-        #E5ECEE !important;
-
-    font-size:
-        16px !important;
-
-    font-weight:
-        650 !important;
-
-    box-shadow:
-        none !important;
-
-    white-space:
-        nowrap !important;
-
-    transition:
-        all 0.18s ease !important;
-}
-
-
-/* ============================================================
-   NAVIGATION HOVER
-   ============================================================ */
-
-.st-key-stylesense_navigation_row .stButton>button:hover {
-
-    background:
-        rgba(57, 255, 20, 0.10) !important;
-
-    color:
-        #39FF14 !important;
-
-    border-color:
-        rgba(57, 255, 20, 0.22) !important;
-
-    transform:
-        translateY(-1px) !important;
-}
-
-
-/* ============================================================
-   NAVIGATION FOCUS
-   ============================================================ */
-
-.st-key-stylesense_navigation_row .stButton>button:focus {
-
-    outline:
-        none !important;
-
-    box-shadow:
-        none !important;
-}
-
-
-/* ============================================================
-   NAVIGATION ACTIVE PRESS
-   ============================================================ */
-
-.st-key-stylesense_navigation_row .stButton>button:active {
-
-    transform:
-        translateY(0) !important;
-
-    background:
-        rgba(57, 255, 20, 0.14) !important;
-}
-
-
-/* ============================================================
-   CUSTOM SIDEBAR
-   ============================================================ */
-
-.st-key-stylesense_sidebar_open {
-
-    position: fixed !important;
-
-    top: 116px !important;
-
-    left: 0 !important;
-
-    bottom: 0 !important;
-
+section[data-testid="stSidebar"] {
     width: 290px !important;
-
+    min-width: 290px !important;
     max-width: 290px !important;
-
-    z-index: 999980 !important;
-
-    overflow-y: auto !important;
-
-    overflow-x: hidden !important;
-
-    padding:
-        18px 14px 35px 14px !important;
 
     background:
         linear-gradient(180deg,
-            #263238 0%,
-            #263238 75%,
-            #1F292D 100%) !important;
+            #111827 0%,
+            #0f172a 100%) !important;
 
-    border-right:
-        1px solid rgba(57, 255, 20, 0.25) !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
 
     box-shadow:
-        8px 0 30px rgba(0, 0, 0, 0.40) !important;
+        8px 0 30px rgba(0, 0, 0, 0.12) !important;
 
-    animation:
-        stylesenseSidebarOpen 0.18s ease-out !important;
+    z-index: 5000 !important;
 }
 
 
 /* ============================================================
-   SIDEBAR ANIMATION
+   SIDEBAR INNER AREA
    ============================================================ */
 
-@keyframes stylesenseSidebarOpen {
+section[data-testid="stSidebar"]>div:first-child {
+    width: 290px !important;
+    max-width: 290px !important;
 
-    from {
-
-        transform:
-            translateX(-20px);
-
-        opacity:
-            0.7;
-    }
-
-    to {
-
-        transform:
-            translateX(0);
-
-        opacity:
-            1;
-    }
+    padding: 18px 14px 24px 14px !important;
 }
 
 
 /* ============================================================
-   SIDEBAR SCROLLBAR
+   SIDEBAR CONTENT
    ============================================================ */
 
-.st-key-stylesense_sidebar_open::-webkit-scrollbar {
-
-    width:
-        5px;
-}
-
-
-.st-key-stylesense_sidebar_open::-webkit-scrollbar-track {
-
-    background:
-        transparent;
-}
-
-
-.st-key-stylesense_sidebar_open::-webkit-scrollbar-thumb {
-
-    background:
-        rgba(57, 255, 20, 0.30);
-
-    border-radius:
-        10px;
+section[data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
+    gap: 0.35rem !important;
 }
 
 
 /* ============================================================
-   SIDEBAR BRAND
+   SIDEBAR TEXT
    ============================================================ */
 
-.stylesense-sidebar-brand {
-
-    margin:
-        3px 6px 0 6px !important;
-
-    color:
-        #FFFFFF !important;
-
-    font-size:
-        24px !important;
-
-    font-weight:
-        800 !important;
-
-    letter-spacing:
-        -0.6px !important;
-}
-
-
-.stylesense-sidebar-brand span {
-
-    color:
-        #39FF14 !important;
-}
-
-
-.stylesense-sidebar-tagline {
-
-    margin:
-        0 6px 17px 6px !important;
-
-    color:
-        #AAB7BB !important;
-
-    font-size:
-        10px !important;
+section[data-testid="stSidebar"] p,
+section[data-testid="stSidebar"] span,
+section[data-testid="stSidebar"] label {
+    color: rgba(255, 255, 255, 0.82);
 }
 
 
 /* ============================================================
-   SIDEBAR HEADER
+   SIDEBAR HEADINGS
    ============================================================ */
 
-.st-key-stylesense_sidebar_open [data-testid="stHorizontalBlock"] .stButton>button {
-
-    min-height:
-        36px !important;
-
-    height:
-        36px !important;
-
-    padding:
-        0 !important;
-
-    border:
-        none !important;
-
-    background:
-        transparent !important;
-
-    color:
-        #AAB7BB !important;
-
-    font-size:
-        18px !important;
-}
-
-
-.st-key-stylesense_sidebar_open [data-testid="stHorizontalBlock"] .stButton>button:hover {
-
-    color:
-        #39FF14 !important;
-
-    background:
-        rgba(57, 255, 20, 0.08) !important;
-}
-
-
-/* ============================================================
-   SIDEBAR SECTION HEADERS
-   ============================================================ */
-
-.stylesense-sidebar-section {
-
-    margin-top:
-        17px !important;
-
-    margin-bottom:
-        7px !important;
-
-    padding:
-        5px 6px !important;
-
-    color:
-        #8DFF70 !important;
-
-    font-size:
-        10px !important;
-
-    font-weight:
-        800 !important;
-
-    letter-spacing:
-        1.1px !important;
-
-    text-transform:
-        uppercase !important;
+section[data-testid="stSidebar"] h1,
+section[data-testid="stSidebar"] h2,
+section[data-testid="stSidebar"] h3 {
+    color: #ffffff !important;
 }
 
 
@@ -727,237 +133,702 @@ footer {
    SIDEBAR BUTTONS
    ============================================================ */
 
-.st-key-stylesense_sidebar_open .stButton {
+section[data-testid="stSidebar"] button {
+    width: 100% !important;
+    min-height: 42px !important;
 
-    width:
-        100% !important;
+    border: 0 !important;
+    border-radius: 10px !important;
 
-    margin:
-        0 !important;
+    background: transparent !important;
 
-    padding:
-        0 !important;
-}
+    color: rgba(255, 255, 255, 0.82) !important;
 
-
-.st-key-stylesense_sidebar_open .stButton>button {
-
-    width:
-        100% !important;
-
-    min-height:
-        42px !important;
-
-    height:
-        auto !important;
-
-    margin-bottom:
-        5px !important;
-
-    padding:
-        8px 12px !important;
-
-    text-align:
-        left !important;
-
-    color:
-        #FFFFFF !important;
-
-    background:
-        rgba(255, 255, 255, 0.025) !important;
-
-    border:
-        1px solid rgba(255, 255, 255, 0.045) !important;
-
-    border-radius:
-        10px !important;
-
-    box-shadow:
-        none !important;
+    text-align: left !important;
 
     transition:
-        all 0.15s ease !important;
+        background 0.18s ease,
+        color 0.18s ease,
+        transform 0.18s ease !important;
 }
 
 
-.st-key-stylesense_sidebar_open .stButton>button:hover {
+section[data-testid="stSidebar"] button:hover {
+    background: rgba(255, 255, 255, 0.08) !important;
 
-    color:
-        #39FF14 !important;
+    color: #ffffff !important;
 
-    background:
-        rgba(57, 255, 20, 0.10) !important;
-
-    border-color:
-        rgba(57, 255, 20, 0.28) !important;
-
-    transform:
-        translateX(2px) !important;
+    transform: translateX(2px);
 }
 
 
-.st-key-stylesense_sidebar_open .stButton>button:focus {
+section[data-testid="stSidebar"] button:focus {
+    outline: none !important;
+    box-shadow: none !important;
+}
 
-    outline:
-        none !important;
+
+/* ============================================================
+   SIDEBAR CLOSE BUTTON
+   ============================================================ */
+
+.st-key-sidebar_close_button {
+    display: none !important;
+}
+
+
+/* ============================================================
+   FIXED TOP HEADER
+   ============================================================ */
+
+/*
+   IMPORTANT:
+   The header is FIXED.
+   It does not move when the page scrolls.
+
+   The background is intentionally NOT white.
+   It is transparent/glass so the existing StyleSense
+   page background remains visible.
+*/
+
+.st-key-stylesense_topbar {
+    position: fixed !important;
+
+    top: 0 !important;
+
+    left: 290px !important;
+    right: 0 !important;
+
+    width: auto !important;
+
+    height: 104px !important;
+    min-height: 104px !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    background: rgba(255, 255, 255, 0.06) !important;
+
+    backdrop-filter: blur(18px) !important;
+    -webkit-backdrop-filter: blur(18px) !important;
+
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
 
     box-shadow:
-        none !important;
+        0 4px 20px rgba(0, 0, 0, 0.08) !important;
+
+    z-index: 10000 !important;
+
+    overflow: visible !important;
 }
 
 
 /* ============================================================
-   GENERAL BUTTONS
+   HEADER TOP ROW
    ============================================================ */
 
-.stButton>button {
+.st-key-stylesense_top_row {
+    width: 100% !important;
 
-    transition:
-        all 0.15s ease !important;
-}
+    min-height: 58px !important;
+    height: 58px !important;
 
-
-/* ============================================================
-   INPUTS
-   ============================================================ */
-
-input,
-textarea,
-select {
-
-    font-size:
-        16px !important;
-}
-
-
-/* ============================================================
-   IMAGES
-   ============================================================ */
-
-img {
-
-    max-width:
-        100% !important;
-
-    height:
-        auto !important;
-}
-
-
-/* ============================================================
-   HORIZONTAL BLOCKS
-   ============================================================ */
-
-[data-testid="stHorizontalBlock"] {
-
-    max-width:
-        100% !important;
-}
-
-
-/* ============================================================
-   DATAFRAMES
-   ============================================================ */
-
-[data-testid="stDataFrame"] {
-
-    max-width:
-        100% !important;
-
-    overflow-x:
-        auto !important;
-}
-
-
-/* ============================================================
-   FILE UPLOADER
-   ============================================================ */
-
-[data-testid="stFileUploader"] {
-
-    max-width:
-        100% !important;
-}
-
-
-/* ============================================================
-   ALERTS
-   ============================================================ */
-
-[data-testid="stAlert"] {
-
-    max-width:
-        100% !important;
-}
-
-
-/* ============================================================
-   STYLESENSE CARD
-   ============================================================ */
-
-.stylesense-card {
-
-    width:
-        100%;
+    margin: 0 !important;
 
     padding:
-        20px;
+        8px 24px 4px 24px !important;
 
-    border-radius:
-        16px;
+    position: relative !important;
 
-    background:
-        rgba(255, 255, 255, 0.06);
-
-    border:
-        1px solid rgba(255, 255, 255, 0.10);
-
-    box-shadow:
-        0 10px 30px rgba(0, 0, 0, 0.16);
-
-    backdrop-filter:
-        blur(10px);
-
-    -webkit-backdrop-filter:
-        blur(10px);
+    z-index: 10001 !important;
 }
 
 
 /* ============================================================
-   MOBILE
+   HEADER BRAND
+   ============================================================ */
+
+.st-key-stylesense_top_row [data-testid="stMarkdownContainer"] {
+    overflow: visible !important;
+}
+
+
+.st-key-stylesense_top_row [data-testid="stMarkdownContainer"] p {
+    margin: 0 !important;
+}
+
+
+.st-key-stylesense_top_row [data-testid="stMarkdownContainer"] strong {
+    white-space: nowrap !important;
+}
+
+
+/* ============================================================
+   BRAND COLUMN
+   ============================================================ */
+
+.st-key-stylesense_top_row .stColumn:nth-child(2) {
+    overflow: visible !important;
+}
+
+
+/* ============================================================
+   STYLESENSE HEADING
+   ============================================================ */
+
+.st-key-stylesense_top_row .stColumn:nth-child(2) [data-testid="stMarkdownContainer"] {
+    font-size: 1.45rem !important;
+
+    font-weight: 800 !important;
+
+    color: inherit !important;
+
+    white-space: nowrap !important;
+
+    line-height: 1 !important;
+}
+
+
+/* ============================================================
+   HEADER BUTTON CONTAINERS
+   ============================================================ */
+
+.st-key-top_notifications,
+.st-key-top_profile,
+.st-key-top_appearance,
+.st-key-top_menu_button {
+    position: relative !important;
+
+    z-index: 10005 !important;
+
+    pointer-events: auto !important;
+}
+
+
+/* ============================================================
+   HEADER BUTTONS
+   ============================================================ */
+
+.st-key-top_notifications button,
+.st-key-top_profile button,
+.st-key-top_appearance button,
+.st-key-top_menu_button button {
+    position: relative !important;
+
+    z-index: 10006 !important;
+
+    pointer-events: auto !important;
+
+    cursor: pointer !important;
+
+    border: 0 !important;
+
+    border-radius: 10px !important;
+
+    background: transparent !important;
+
+    color: inherit !important;
+
+    min-height: 38px !important;
+
+    padding:
+        6px 10px !important;
+
+    font-size: 1.15rem !important;
+
+    box-shadow: none !important;
+}
+
+
+.st-key-top_notifications button:hover,
+.st-key-top_profile button:hover,
+.st-key-top_appearance button:hover,
+.st-key-top_menu_button button:hover {
+    background: rgba(127, 127, 127, 0.10) !important;
+}
+
+
+/* ============================================================
+   PREVENT CHILD ELEMENTS FROM STEALING CLICKS
+   ============================================================ */
+
+.st-key-top_notifications button *,
+.st-key-top_profile button *,
+.st-key-top_appearance button *,
+.st-key-top_menu_button button * {
+    pointer-events: none !important;
+}
+
+
+/* ============================================================
+   DESKTOP HAMBURGER
+   ============================================================ */
+
+@media (min-width: 769px) {
+
+    .st-key-top_menu_button {
+        display: none !important;
+    }
+
+}
+
+
+/* ============================================================
+   QUICK NAVIGATION
+   ============================================================ */
+
+.st-key-stylesense_navigation_row {
+    width: 100% !important;
+
+    height: 46px !important;
+    min-height: 46px !important;
+
+    margin: 0 !important;
+
+    padding:
+        0 24px 8px 24px !important;
+
+    position: relative !important;
+
+    z-index: 10002 !important;
+}
+
+
+/* ============================================================
+   NAVIGATION BUTTON CONTAINERS
+   ============================================================ */
+
+.st-key-top_nav_home,
+.st-key-top_nav_product,
+.st-key-top_nav_create,
+.st-key-top_nav_ai {
+    position: relative !important;
+
+    z-index: 10003 !important;
+
+    pointer-events: auto !important;
+}
+
+
+/* ============================================================
+   NAVIGATION BUTTONS
+   ============================================================ */
+
+.st-key-top_nav_home button,
+.st-key-top_nav_product button,
+.st-key-top_nav_create button,
+.st-key-top_nav_ai button {
+    min-height: 34px !important;
+
+    border: 0 !important;
+
+    border-radius: 8px !important;
+
+    background: transparent !important;
+
+    color: inherit !important;
+
+    font-size: 0.88rem !important;
+
+    font-weight: 600 !important;
+
+    white-space: nowrap !important;
+
+    box-shadow: none !important;
+
+    cursor: pointer !important;
+}
+
+
+.st-key-top_nav_home button:hover,
+.st-key-top_nav_product button:hover,
+.st-key-top_nav_create button:hover,
+.st-key-top_nav_ai button:hover {
+    background: rgba(127, 127, 127, 0.10) !important;
+}
+
+
+/* ============================================================
+   MAIN STREAMLIT CONTENT
+   ============================================================ */
+
+.main .block-container {
+    width: 100% !important;
+
+    max-width: none !important;
+
+    margin: 0 !important;
+
+    padding-left: 32px !important;
+
+    padding-right: 32px !important;
+
+    /*
+       Header is 104px high.
+       Extra spacing keeps dashboard content
+       completely below the fixed header.
+    */
+    padding-top: 136px !important;
+
+    padding-bottom: 40px !important;
+}
+
+
+/* ============================================================
+   MAIN CONTENT WIDTH
+   ============================================================ */
+
+[data-testid="stAppViewContainer"] {
+    overflow-x: hidden !important;
+}
+
+
+[data-testid="stAppViewContainer"]>.main {
+    overflow-x: hidden !important;
+}
+
+
+/* ============================================================
+   GENERAL CONTENT SAFETY
+   ============================================================ */
+
+.main [data-testid="stVerticalBlock"] {
+    max-width: 100% !important;
+}
+
+
+/* ============================================================
+   MAIN CONTENT LAYER
+   ============================================================ */
+
+.main {
+    position: relative !important;
+
+    z-index: 1 !important;
+}
+
+
+/* ============================================================
+   MOBILE LAYOUT
    ============================================================ */
 
 @media (max-width: 768px) {
 
 
     /* ========================================================
-       TOP BAR
+       MOBILE SIDEBAR
+       ======================================================== */
+
+    section[data-testid="stSidebar"] {
+        width: min(86vw, 320px) !important;
+
+        min-width: min(86vw, 320px) !important;
+
+        max-width: min(86vw, 320px) !important;
+
+        position: fixed !important;
+
+        top: 0 !important;
+
+        bottom: 0 !important;
+
+        left: 0 !important;
+
+        z-index: 30000 !important;
+
+        box-shadow:
+            10px 0 40px rgba(0, 0, 0, 0.28) !important;
+    }
+
+
+    section[data-testid="stSidebar"]>div:first-child {
+        width: 100% !important;
+
+        max-width: 100% !important;
+
+        padding:
+            18px 12px 24px 12px !important;
+    }
+
+
+    /* ========================================================
+       MOBILE SIDEBAR CLOSE BUTTON
+       ======================================================== */
+
+    .st-key-sidebar_close_button {
+        display: block !important;
+
+        position: relative !important;
+
+        z-index: 30005 !important;
+    }
+
+
+    .st-key-sidebar_close_button button {
+        width: 38px !important;
+
+        height: 38px !important;
+
+        min-height: 38px !important;
+
+        padding: 0 !important;
+
+        border-radius: 9px !important;
+
+        text-align: center !important;
+
+        background:
+            rgba(255, 255, 255, 0.08) !important;
+
+        color: #ffffff !important;
+    }
+
+
+    /* ========================================================
+       FIXED MOBILE HEADER
        ======================================================== */
 
     .st-key-stylesense_topbar {
+        position: fixed !important;
 
-        height:
-            112px !important;
+        top: 0 !important;
 
-        padding:
-            6px 7px !important;
+        left: 0 !important;
+
+        right: 0 !important;
+
+        width: 100% !important;
+
+        height: 112px !important;
+
+        min-height: 112px !important;
+
+        padding: 0 !important;
+
+        /*
+           NOT WHITE.
+           Transparent/glass background.
+        */
+        background:
+            rgba(255, 255, 255, 0.06) !important;
+
+        backdrop-filter: blur(18px) !important;
+
+        -webkit-backdrop-filter: blur(18px) !important;
+
+        border-bottom:
+            1px solid rgba(255, 255, 255, 0.08) !important;
+
+        box-shadow:
+            0 4px 20px rgba(0, 0, 0, 0.08) !important;
+
+        z-index: 20000 !important;
+
+        overflow: visible !important;
     }
 
+
+    /* ========================================================
+       MOBILE TOP ROW
+       ======================================================== */
 
     .st-key-stylesense_top_row {
+        width: 100% !important;
 
-        height:
-            48px !important;
+        height: 62px !important;
+
+        min-height: 62px !important;
+
+        padding:
+            8px 12px 4px 12px !important;
+
+        z-index: 20001 !important;
     }
 
 
-    .st-key-stylesense_top_row [data-testid="stHorizontalBlock"] {
+    /* ========================================================
+       MOBILE BRAND
+       ======================================================== */
 
-        height:
-            48px !important;
+    .st-key-stylesense_top_row .stColumn:nth-child(2) [data-testid="stMarkdownContainer"] {
+        font-size: 1.28rem !important;
 
-        gap:
-            2px !important;
+        font-weight: 800 !important;
+
+        color: inherit !important;
+
+        white-space: nowrap !important;
+
+        overflow: visible !important;
+
+        text-overflow: clip !important;
+
+        line-height: 1 !important;
+    }
+
+
+    /* ========================================================
+       MOBILE HEADER ICONS
+       ======================================================== */
+
+    .st-key-top_menu_button,
+    .st-key-top_notifications,
+    .st-key-top_profile,
+    .st-key-top_appearance {
+        position: relative !important;
+
+        z-index: 20005 !important;
+
+        pointer-events: auto !important;
+    }
+
+
+    .st-key-top_menu_button button,
+    .st-key-top_notifications button,
+    .st-key-top_profile button,
+    .st-key-top_appearance button {
+        min-height: 38px !important;
+
+        height: 38px !important;
+
+        padding:
+            5px 7px !important;
+
+        font-size: 1.05rem !important;
+
+        border-radius: 9px !important;
+
+        pointer-events: auto !important;
+    }
+
+
+    /* ========================================================
+       MOBILE QUICK NAVIGATION
+       ======================================================== */
+
+    .st-key-stylesense_navigation_row {
+        height: 50px !important;
+
+        min-height: 50px !important;
+
+        padding:
+            0 8px 8px 8px !important;
+
+        overflow: hidden !important;
+
+        z-index: 20002 !important;
+    }
+
+
+    .st-key-top_nav_home,
+    .st-key-top_nav_product,
+    .st-key-top_nav_create,
+    .st-key-top_nav_ai {
+        min-width: 0 !important;
+
+        z-index: 20003 !important;
+    }
+
+
+    .st-key-top_nav_home button,
+    .st-key-top_nav_product button,
+    .st-key-top_nav_create button,
+    .st-key-top_nav_ai button {
+        min-height: 34px !important;
+
+        height: 34px !important;
+
+        padding:
+            4px 5px !important;
+
+        font-size: 0.72rem !important;
+
+        white-space: nowrap !important;
+
+        overflow: hidden !important;
+
+        text-overflow: ellipsis !important;
+    }
+
+
+    /* ========================================================
+       MOBILE MAIN CONTENT
+       ======================================================== */
+
+    .main .block-container {
+        width: 100% !important;
+
+        max-width: none !important;
+
+        margin: 0 !important;
+
+        padding-left: 14px !important;
+
+        padding-right: 14px !important;
+
+        /*
+           Header = 112px.
+           Content begins below it.
+        */
+        padding-top: 132px !important;
+
+        padding-bottom: 30px !important;
+    }
+
+
+    /* ========================================================
+       MOBILE CONTENT SAFETY
+       ======================================================== */
+
+    .main {
+        position: relative !important;
+
+        z-index: 1 !important;
+    }
+
+
+    /* ========================================================
+       PREVENT HORIZONTAL OVERFLOW
+       ======================================================== */
+
+    [data-testid="stAppViewContainer"],
+    [data-testid="stAppViewContainer"]>.main,
+    .main .block-container {
+        overflow-x: hidden !important;
+    }
+
+}
+
+
+/* ============================================================
+   SMALL PHONES
+   ============================================================ */
+
+@media (max-width: 480px) {
+
+
+    /* ========================================================
+       HEADER
+       ======================================================== */
+
+    .st-key-stylesense_topbar {
+        height: 108px !important;
+
+        min-height: 108px !important;
+    }
+
+
+    /* ========================================================
+       TOP ROW
+       ======================================================== */
+
+    .st-key-stylesense_top_row {
+        height: 60px !important;
+
+        min-height: 60px !important;
+
+        padding:
+            7px 8px 3px 8px !important;
     }
 
 
@@ -965,275 +836,233 @@ img {
        BRAND
        ======================================================== */
 
-    .st-key-stylesense_top_row [data-testid="stColumn"]:nth-child(2) .stButton>button {
-
-        font-size:
-            17px !important;
-
-        padding:
-            3px !important;
+    .st-key-stylesense_top_row .stColumn:nth-child(2) [data-testid="stMarkdownContainer"] {
+        font-size: 1.18rem !important;
     }
 
 
     /* ========================================================
-       RIGHT ICONS
+       HEADER ICONS
        ======================================================== */
 
-    .st-key-stylesense_top_row [data-testid="stColumn"]:nth-child(4) .stButton>button,
-    .st-key-stylesense_top_row [data-testid="stColumn"]:nth-child(5) .stButton>button,
-    .st-key-stylesense_top_row [data-testid="stColumn"]:nth-child(6) .stButton>button {
+    .st-key-top_menu_button button,
+    .st-key-top_notifications button,
+    .st-key-top_profile button,
+    .st-key-top_appearance button {
+        min-height: 36px !important;
 
-        font-size:
-            0 !important;
-    }
+        height: 36px !important;
 
+        padding:
+            4px 5px !important;
 
-    .st-key-stylesense_top_row [data-testid="stColumn"]:nth-child(4) .stButton>button::after {
-
-        content:
-            "🔔";
-
-        font-size:
-            18px;
-    }
-
-
-    .st-key-stylesense_top_row [data-testid="stColumn"]:nth-child(5) .stButton>button::after {
-
-        content:
-            "👤";
-
-        font-size:
-            18px;
-    }
-
-
-    .st-key-stylesense_top_row [data-testid="stColumn"]:nth-child(6) .stButton>button::after {
-
-        content:
-            "◐";
-
-        font-size:
-            18px;
+        font-size: 0.98rem !important;
     }
 
 
     /* ========================================================
-       SECOND NAVIGATION
+       QUICK NAV
        ======================================================== */
 
     .st-key-stylesense_navigation_row {
+        height: 48px !important;
 
-        height:
-            49px !important;
-
-        overflow-x:
-            auto !important;
-
-        overflow-y:
-            hidden !important;
-    }
-
-
-    .st-key-stylesense_navigation_row [data-testid="stHorizontalBlock"] {
-
-        width:
-            100% !important;
-
-        height:
-            43px !important;
-
-        display:
-            flex !important;
-
-        flex-direction:
-            row !important;
-
-        gap:
-            3px !important;
-
-        justify-content:
-            center !important;
-    }
-
-
-    .st-key-stylesense_navigation_row [data-testid="stColumn"] {
-
-        flex:
-            1 1 0 !important;
-
-        min-width:
-            0 !important;
+        min-height: 48px !important;
 
         padding:
-            0 !important;
+            0 4px 7px 4px !important;
     }
 
 
-    .st-key-stylesense_navigation_row .stButton>button {
-
-        height:
-            38px !important;
-
-        min-height:
-            38px !important;
+    .st-key-top_nav_home button,
+    .st-key-top_nav_product button,
+    .st-key-top_nav_create button,
+    .st-key-top_nav_ai button {
+        font-size: 0.66rem !important;
 
         padding:
-            3px 4px !important;
-
-        font-size:
-            12px !important;
-
-        font-weight:
-            600 !important;
-
-        border-radius:
-            8px !important;
+            3px 2px !important;
     }
 
 
     /* ========================================================
-       MAIN CONTENT
+       CONTENT
        ======================================================== */
 
     .main .block-container {
+        padding-left: 10px !important;
 
-        padding-top:
-            125px !important;
+        padding-right: 10px !important;
 
-        padding-right:
-            14px !important;
-
-        padding-bottom:
-            30px !important;
-
-        padding-left:
-            14px !important;
+        padding-top: 126px !important;
     }
 
-
-    /* ========================================================
-       MOBILE SIDEBAR
-       ======================================================== */
-
-    .st-key-stylesense_sidebar_open {
-
-        top:
-            112px !important;
-
-        width:
-            310px !important;
-
-        max-width:
-            86vw !important;
-
-        padding:
-            16px 12px 30px 12px !important;
-    }
-
-
-    /* ========================================================
-       MOBILE HEADINGS
-       ======================================================== */
-
-    h1 {
-
-        font-size:
-            28px !important;
-
-        line-height:
-            1.15 !important;
-    }
-
-
-    h2 {
-
-        font-size:
-            23px !important;
-
-        line-height:
-            1.2 !important;
-    }
-
-
-    h3 {
-
-        font-size:
-            19px !important;
-
-        line-height:
-            1.25 !important;
-    }
-
-
-    /* ========================================================
-       MOBILE BUTTONS
-       ======================================================== */
-
-    .stButton>button {
-
-        min-height:
-            44px !important;
-
-        border-radius:
-            11px !important;
-    }
 }
 
 
 /* ============================================================
-   TABLET
+   VERY SMALL PHONES
    ============================================================ */
 
-@media (min-width: 769px) and (max-width: 1100px) {
+@media (max-width: 360px) {
 
 
-    .main .block-container {
+    /* ========================================================
+       BRAND
+       ======================================================== */
 
-        padding-right:
-            28px !important;
-
-        padding-left:
-            28px !important;
+    .st-key-stylesense_top_row .stColumn:nth-child(2) [data-testid="stMarkdownContainer"] {
+        font-size: 1.08rem !important;
     }
 
 
-    .st-key-stylesense_topbar {
+    /* ========================================================
+       HEADER ICONS
+       ======================================================== */
 
-        padding-right:
-            10px !important;
+    .st-key-top_menu_button button,
+    .st-key-top_notifications button,
+    .st-key-top_profile button,
+    .st-key-top_appearance button {
+        font-size: 0.9rem !important;
 
-        padding-left:
-            10px !important;
+        padding:
+            3px 3px !important;
     }
 
 
-    .st-key-stylesense_navigation_row .stButton>button {
+    /* ========================================================
+       QUICK NAV
+       ======================================================== */
 
-        font-size:
-            14px !important;
-
-        padding-left:
-            8px !important;
-
-        padding-right:
-            8px !important;
+    .st-key-top_nav_home button,
+    .st-key-top_nav_product button,
+    .st-key-top_nav_create button,
+    .st-key-top_nav_ai button {
+        font-size: 0.58rem !important;
     }
+
 }
 
 
 /* ============================================================
-   ACCESSIBILITY
+   STREAMLIT COLUMN SAFETY
    ============================================================ */
 
-button:focus-visible,
-input:focus-visible,
-textarea:focus-visible,
-select:focus-visible {
+[data-testid="column"] {
+    min-width: 0 !important;
+}
 
-    outline:
-        2px solid rgba(57, 255, 20, 0.65) !important;
 
-    outline-offset:
-        2px !important;
+/* ============================================================
+   HEADER CLICK SAFETY
+   ============================================================ */
+
+.st-key-stylesense_topbar,
+.st-key-stylesense_topbar *,
+.st-key-stylesense_top_row,
+.st-key-stylesense_navigation_row {
+    pointer-events: auto !important;
+}
+
+
+/* ============================================================
+   DECORATIVE MARKDOWN MUST NOT BLOCK BUTTONS
+   ============================================================ */
+
+.st-key-stylesense_topbar [data-testid="stMarkdownContainer"] {
+    pointer-events: none !important;
+}
+
+
+/* ============================================================
+   HEADER BUTTONS MUST REMAIN CLICKABLE
+   ============================================================ */
+
+.st-key-stylesense_topbar button {
+    pointer-events: auto !important;
+
+    cursor: pointer !important;
+}
+
+
+/* ============================================================
+   MOBILE SIDEBAR OVERLAY SAFETY
+   ============================================================ */
+
+@media (max-width: 768px) {
+
+    section[data-testid="stSidebar"] {
+        pointer-events: auto !important;
+    }
+
+
+    section[data-testid="stSidebar"] * {
+        pointer-events: auto !important;
+    }
+
+}
+
+
+/* ============================================================
+   DESKTOP SIDEBAR ALWAYS VISIBLE
+   ============================================================ */
+
+@media (min-width: 769px) {
+
+    section[data-testid="stSidebar"] {
+        display: block !important;
+
+        visibility: visible !important;
+
+        opacity: 1 !important;
+
+        transform: none !important;
+    }
+
+}
+
+
+/* ============================================================
+   MOBILE SIDEBAR CONTROL
+   ============================================================ */
+
+@media (max-width: 768px) {
+
+    section[data-testid="stSidebar"] {
+        transition:
+            transform 0.2s ease,
+            opacity 0.2s ease !important;
+    }
+
+}
+
+
+/* ============================================================
+   SCROLLBAR
+   ============================================================ */
+
+::-webkit-scrollbar {
+    width: 7px;
+
+    height: 7px;
+}
+
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+
+::-webkit-scrollbar-thumb {
+    border-radius: 20px;
+
+    background:
+        rgba(100, 116, 139, 0.35);
+}
+
+
+::-webkit-scrollbar-thumb:hover {
+    background:
+        rgba(100, 116, 139, 0.55);
 }

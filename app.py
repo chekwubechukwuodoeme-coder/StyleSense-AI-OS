@@ -54,7 +54,7 @@ st.set_page_config(
     page_title="StyleSense AI OS",
     page_icon="👗",
     layout="wide",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="expanded",
 )
 
 
@@ -63,7 +63,6 @@ st.set_page_config(
 # ============================================================
 
 BASE_DIR = Path(__file__).resolve().parent
-
 CSS_PATH = BASE_DIR / "assets" / "css" / "style.css"
 
 
@@ -72,7 +71,7 @@ CSS_PATH = BASE_DIR / "assets" / "css" / "style.css"
 # ============================================================
 
 def load_css():
-    """Load the main StyleSense stylesheet."""
+    """Load StyleSense global CSS."""
 
     if not CSS_PATH.exists():
         print(f"CSS FILE NOT FOUND: {CSS_PATH}")
@@ -115,15 +114,14 @@ DEFAULT_SESSION_STATE = {
 
     "auth_page": "login",
 
-    # Main navigation
     "main_navigation": "Dashboard",
 
-    # Sidebar
-    "sidebar_open": False,
+    # Mobile navigation
     "mobile_menu_open": False,
+    "sidebar_open": False,
 
-    # Profile/settings
-    "open_profile_settings": False,
+    # Settings
+    "settings_section": "Account",
 
     # Designs
     "saved_designs": [],
@@ -133,13 +131,13 @@ DEFAULT_SESSION_STATE = {
     "current_design": "",
     "current_image": None,
 
-    # Background design generation
+    # Background generation
     "design_generation_job_id": None,
     "design_generation_status": None,
     "design_generation_result": None,
     "design_generation_error": None,
 
-    # Projects/workspace
+    # Projects
     "current_project": None,
     "open_workspace": False,
 
@@ -181,7 +179,9 @@ DEFAULT_SESSION_STATE = {
 
 
 for key, value in DEFAULT_SESSION_STATE.items():
+
     if key not in st.session_state:
+
         st.session_state[key] = value
 
 
@@ -196,6 +196,7 @@ if not st.session_state.logged_in:
     if current_user:
 
         st.session_state.logged_in = True
+
         st.session_state.user_id = current_user["id"]
 
         st.session_state.user_name = (
@@ -227,7 +228,9 @@ if not st.session_state.logged_in:
         st.rerun()
 
     else:
+
         render_auth()
+
         st.stop()
 
 
@@ -237,18 +240,12 @@ if not st.session_state.logged_in:
 
 PAGES = {
 
-    # --------------------------------------------------------
     # WORKSPACE
-    # --------------------------------------------------------
-
     "Dashboard": render_dashboard,
     "Projects": render_projects,
     "AI Team": render_ai_team,
 
-    # --------------------------------------------------------
     # AI DESIGN
-    # --------------------------------------------------------
-
     "Design Studio": render_design_studio,
     "Design Library": render_design_library,
     "Fashion Inspiration": render_fashion_inspiration,
@@ -261,44 +258,29 @@ PAGES = {
     "Color Matcher": render_color_matcher,
     "AI Virtual Stylist": render_virtual_stylist,
 
-    # --------------------------------------------------------
     # FASHION INTELLIGENCE
-    # --------------------------------------------------------
-
     "Fashion News": render_fashion_news,
     "Fashion Magazine": render_fashion_magazine,
     "AI Fashion Trends": render_fashion_trends,
 
-    # --------------------------------------------------------
     # PRODUCTION
-    # --------------------------------------------------------
-
     "Production Manager": render_production_manager,
     "Inventory": render_inventory,
     "Measurements": render_measurements,
     "Tech Packs": render_tech_packs,
 
-    # --------------------------------------------------------
     # BUSINESS
-    # --------------------------------------------------------
-
     "Clients": render_clients,
     "Orders": render_orders,
     "Expenses": render_expenses,
     "Pricing": render_pricing,
     "Revenue & Profit": render_revenue_profit,
 
-    # --------------------------------------------------------
     # COMMUNITY
-    # --------------------------------------------------------
-
     "Fashion Professionals": render_profiles,
     "Marketplace": render_marketplace,
 
-    # --------------------------------------------------------
     # SYSTEM
-    # --------------------------------------------------------
-
     "Settings": render_settings,
     "Help & Support": render_help_support,
 }
@@ -306,52 +288,160 @@ PAGES = {
 
 # ============================================================
 # NAVIGATION FUNCTIONS
+#
+# IMPORTANT:
+# These functions are used as Streamlit callbacks.
+# DO NOT call st.rerun() inside them.
+#
+# Streamlit automatically reruns the application after
+# an on_click callback finishes.
 # ============================================================
 
 def navigate_to(page):
     """Navigate to a StyleSense page."""
 
     st.session_state.main_navigation = page
-    st.session_state.sidebar_open = False
-    st.session_state.mobile_menu_open = False
 
-    st.rerun()
+    st.session_state.mobile_menu_open = False
+    st.session_state.sidebar_open = False
+
+
+def open_settings(section):
+    """Open a specific StyleSense Settings section."""
+
+    st.session_state.main_navigation = "Settings"
+
+    st.session_state.settings_section = section
+
+    st.session_state.mobile_menu_open = False
+    st.session_state.sidebar_open = False
+
+
+def open_notifications():
+    """Open Settings → Notifications."""
+
+    st.session_state.main_navigation = "Settings"
+
+    st.session_state.settings_section = "Notifications"
+
+    st.session_state.mobile_menu_open = False
+    st.session_state.sidebar_open = False
+
+
+def open_profile():
+    """Open Settings → Account."""
+
+    st.session_state.main_navigation = "Settings"
+
+    st.session_state.settings_section = "Account"
+
+    st.session_state.mobile_menu_open = False
+    st.session_state.sidebar_open = False
+
+
+def open_appearance():
+    """Open Settings → Appearance."""
+
+    st.session_state.main_navigation = "Settings"
+
+    st.session_state.settings_section = "Appearance"
+
+    st.session_state.mobile_menu_open = False
+    st.session_state.sidebar_open = False
 
 
 def toggle_sidebar():
-    """Open or close the StyleSense custom sidebar."""
+    """Toggle the mobile sidebar."""
 
     current_state = st.session_state.get(
-        "sidebar_open",
+        "mobile_menu_open",
         False,
     )
 
     new_state = not current_state
 
-    st.session_state.sidebar_open = new_state
     st.session_state.mobile_menu_open = new_state
+    st.session_state.sidebar_open = new_state
 
-    st.rerun()
+
+def close_mobile_sidebar():
+    """Close the mobile sidebar."""
+
+    st.session_state.mobile_menu_open = False
+    st.session_state.sidebar_open = False
 
 
 def perform_logout():
     """Log the current user out."""
 
     try:
+
         logout_user()
+
     except Exception:
+
         pass
 
+
     st.session_state.logged_in = False
+
     st.session_state.user_id = None
     st.session_state.user_name = None
     st.session_state.user_email = None
+
     st.session_state.user_profession = "Fashion Designer"
+
     st.session_state.user_avatar_url = ""
+
     st.session_state.sidebar_open = False
     st.session_state.mobile_menu_open = False
 
-    st.rerun()
+    st.session_state.settings_section = "Account"
+
+
+# ============================================================
+# MOBILE SIDEBAR VISIBILITY
+# ============================================================
+
+if st.session_state.get("mobile_menu_open", False):
+
+    st.markdown(
+        """
+        <style>
+        @media (max-width: 768px) {
+
+            section[data-testid="stSidebar"] {
+                display: block !important;
+                visibility: visible !important;
+                opacity: 1 !important;
+                transform: translateX(0) !important;
+            }
+
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+else:
+
+    st.markdown(
+        """
+        <style>
+        @media (max-width: 768px) {
+
+            section[data-testid="stSidebar"] {
+                display: none !important;
+                visibility: hidden !important;
+                opacity: 0 !important;
+                transform: translateX(-100%) !important;
+            }
+
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 # ============================================================
@@ -362,6 +452,7 @@ topbar = st.container(
     key="stylesense_topbar"
 )
 
+
 with topbar:
 
     # ========================================================
@@ -371,6 +462,7 @@ with topbar:
     top_row = st.container(
         key="stylesense_top_row"
     )
+
 
     with top_row:
 
@@ -393,79 +485,86 @@ with topbar:
             vertical_alignment="center",
         )
 
-        # ----------------------------------------------------
+
+        # ====================================================
         # HAMBURGER
-        # ----------------------------------------------------
+        # ====================================================
 
         with menu_column:
 
-            if st.button(
+            st.button(
                 "☰",
                 key="top_menu_button",
                 help="Open navigation",
-            ):
-                toggle_sidebar()
+                use_container_width=True,
+                on_click=toggle_sidebar,
+            )
 
-        # ----------------------------------------------------
+
+        # ====================================================
         # BRAND
-        #
-        # IMPORTANT:
-        # This is deliberately NOT a button.
-        # ----------------------------------------------------
+        # ====================================================
 
         with brand_column:
 
             st.markdown(
-                "✦ StyleSense",
-                help=None,
+                "✦ StyleSense"
             )
 
-        # ----------------------------------------------------
-        # NOTIFICATION
-        # ----------------------------------------------------
+
+        # ====================================================
+        # NOTIFICATIONS
+        # ====================================================
 
         with notification_column:
 
-            if st.button(
+            st.button(
                 "🔔",
                 key="top_notifications",
                 help="Notifications",
-            ):
-                navigate_to("Notifications")
+                use_container_width=True,
+                on_click=open_notifications,
+            )
 
-        # ----------------------------------------------------
+
+        # ====================================================
         # PROFILE
-        # ----------------------------------------------------
+        # ====================================================
 
         with profile_column:
 
-            if st.button(
+            st.button(
                 "👤",
                 key="top_profile",
-                help="Profile",
-            ):
-                navigate_to("Fashion Professionals")
+                help="Account",
+                use_container_width=True,
+                on_click=open_profile,
+            )
 
-        # ----------------------------------------------------
+
+        # ====================================================
         # APPEARANCE
-        # ----------------------------------------------------
+        # ====================================================
 
         with appearance_column:
 
-            if st.button(
+            st.button(
                 "◐",
                 key="top_appearance",
                 help="Appearance",
-            ):
-                navigate_to("Settings")
+                use_container_width=True,
+                on_click=open_appearance,
+            )
+
 
     # ========================================================
-    # MAIN NAVIGATION ROW
+    # QUICK NAVIGATION
     # ========================================================
 
     navigation_row = st.container(
         key="stylesense_navigation_row"
     )
+
 
     with navigation_row:
 
@@ -484,400 +583,433 @@ with topbar:
             vertical_alignment="center",
         )
 
-        # ----------------------------------------------------
-        # HOME
-        # ----------------------------------------------------
 
         with nav_home:
 
-            if st.button(
+            st.button(
                 "🏠  Home",
                 key="top_nav_home",
                 use_container_width=True,
-            ):
-                navigate_to("Dashboard")
+                on_click=navigate_to,
+                args=("Dashboard",),
+            )
 
-        # ----------------------------------------------------
-        # PRODUCT
-        # ----------------------------------------------------
 
         with nav_product:
 
-            if st.button(
+            st.button(
                 "📦  Product",
                 key="top_nav_product",
                 use_container_width=True,
-            ):
-                navigate_to("Production Manager")
+                on_click=navigate_to,
+                args=("Production Manager",),
+            )
 
-        # ----------------------------------------------------
-        # CREATE
-        # ----------------------------------------------------
 
         with nav_create:
 
-            if st.button(
+            st.button(
                 "✨  Create",
                 key="top_nav_create",
                 use_container_width=True,
-            ):
-                navigate_to("Design Studio")
+                on_click=navigate_to,
+                args=("Design Studio",),
+            )
 
-        # ----------------------------------------------------
-        # AI TEAMS
-        # ----------------------------------------------------
 
         with nav_ai:
 
-            if st.button(
+            st.button(
                 "🤖  AI Teams",
                 key="top_nav_ai",
                 use_container_width=True,
-            ):
-                navigate_to("AI Team")
+                on_click=navigate_to,
+                args=("AI Team",),
+            )
 
 
 # ============================================================
-# CUSTOM SIDEBAR
+# NATIVE STYLESENSE SIDEBAR
 # ============================================================
 
-if st.session_state.get(
-    "sidebar_open",
-    False,
-):
+with st.sidebar:
 
-    sidebar = st.container(
-        key="stylesense_sidebar_open"
+    (
+        sidebar_brand_column,
+        sidebar_close_column,
+    ) = st.columns(
+        [4, 1],
+        vertical_alignment="center",
     )
 
-    with sidebar:
 
-        # ====================================================
-        # SIDEBAR HEADER
-        # ====================================================
+    # ========================================================
+    # SIDEBAR BRAND
+    # ========================================================
 
-        (
-            sidebar_brand_column,
-            sidebar_close_column,
-        ) = st.columns(
-            [4, 1],
-            vertical_alignment="center",
+    with sidebar_brand_column:
+
+        st.markdown(
+            "✦ StyleSense"
         )
 
-        with sidebar_brand_column:
+        st.caption(
+            "AI Fashion Operating System"
+        )
+
+
+    # ========================================================
+    # SIDEBAR CLOSE
+    # ========================================================
+
+    with sidebar_close_column:
+
+        st.button(
+            "✕",
+            key="sidebar_close_button",
+            help="Close sidebar",
+            on_click=close_mobile_sidebar,
+        )
+
+
+    # ========================================================
+    # USER PROFILE
+    # ========================================================
+
+    user_name = (
+        st.session_state.get(
+            "user_name",
+            "Fashion Designer",
+        )
+        or "Fashion Designer"
+    )
+
+    user_email = (
+        st.session_state.get(
+            "user_email",
+            "",
+        )
+        or ""
+    )
+
+    user_profession = (
+        st.session_state.get(
+            "user_profession",
+            "Fashion Designer",
+        )
+        or "Fashion Designer"
+    )
+
+    user_avatar_url = (
+        st.session_state.get(
+            "user_avatar_url",
+            "",
+        )
+        or ""
+    )
+
+
+    (
+        avatar_column,
+        profile_info_column,
+    ) = st.columns(
+        [0.8, 2.8],
+        vertical_alignment="center",
+    )
+
+
+    with avatar_column:
+
+        if user_avatar_url:
+
+            st.image(
+                user_avatar_url,
+                width=52,
+            )
+
+        else:
+
+            first_letter = (
+                user_name.strip()[0].upper()
+                if user_name.strip()
+                else "F"
+            )
 
             st.markdown(
-                "✦ StyleSense",
+                f"### {first_letter}"
             )
+
+
+    with profile_info_column:
+
+        st.markdown(
+            f"**{user_name}**"
+        )
+
+        st.caption(
+            user_profession
+        )
+
+        if user_email:
 
             st.caption(
-                "AI Fashion Operating System"
+                user_email
             )
 
-        with sidebar_close_column:
 
-            if st.button(
-                "✕",
-                key="sidebar_close_button",
-                help="Close sidebar",
-            ):
-                st.session_state.sidebar_open = False
-                st.session_state.mobile_menu_open = False
-                st.rerun()
+    st.divider()
 
-        # ====================================================
-        # USER PROFILE
-        # ====================================================
 
-        user_name = (
-            st.session_state.get(
-                "user_name",
-                "Fashion Designer",
-            )
-            or "Fashion Designer"
+    # ========================================================
+    # WORKSPACE
+    # ========================================================
+
+    st.caption("WORKSPACE")
+
+
+    st.button(
+        "🏠  Dashboard",
+        key="side_dashboard",
+        use_container_width=True,
+        on_click=navigate_to,
+        args=("Dashboard",),
+    )
+
+
+    st.button(
+        "📁  Projects",
+        key="side_projects",
+        use_container_width=True,
+        on_click=navigate_to,
+        args=("Projects",),
+    )
+
+
+    st.button(
+        "🤖  AI Team",
+        key="side_ai_team",
+        use_container_width=True,
+        on_click=navigate_to,
+        args=("AI Team",),
+    )
+
+
+    # ========================================================
+    # AI DESIGN
+    # ========================================================
+
+    st.caption("🎨 AI DESIGN")
+
+
+    ai_design_navigation = [
+        ("✨", "Design Studio"),
+        ("📚", "Design Library"),
+        ("✏️", "AI Design Editor"),
+        ("💡", "Fashion Inspiration"),
+        ("🎨", "Color Matcher"),
+        ("🧵", "Fabric Advisor"),
+        ("📸", "Outfit Analyzer"),
+        ("👗", "AI Virtual Stylist"),
+        ("🎨", "Logo Generator"),
+    ]
+
+
+    for index, (icon, label) in enumerate(
+        ai_design_navigation
+    ):
+
+        st.button(
+            f"{icon}  {label}",
+            key=f"side_ai_design_{index}",
+            use_container_width=True,
+            on_click=navigate_to,
+            args=(label,),
         )
 
-        user_email = (
-            st.session_state.get(
-                "user_email",
-                "",
-            )
-            or ""
+
+    # ========================================================
+    # FASHION INTELLIGENCE
+    # ========================================================
+
+    st.caption("🧠 FASHION INTELLIGENCE")
+
+
+    intelligence_navigation = [
+        ("📈", "AI Fashion Trends"),
+        ("📰", "Fashion News"),
+        ("📰", "Fashion Magazine"),
+    ]
+
+
+    for index, (icon, label) in enumerate(
+        intelligence_navigation
+    ):
+
+        st.button(
+            f"{icon}  {label}",
+            key=f"side_intelligence_{index}",
+            use_container_width=True,
+            on_click=navigate_to,
+            args=(label,),
         )
 
-        user_profession = (
-            st.session_state.get(
-                "user_profession",
-                "Fashion Designer",
-            )
-            or "Fashion Designer"
+
+    # ========================================================
+    # PRODUCTION
+    # ========================================================
+
+    st.caption("🏭 PRODUCTION")
+
+
+    production_navigation = [
+        ("🏭", "Production Manager"),
+        ("📦", "Inventory"),
+        ("📏", "Measurements"),
+        ("📋", "Tech Packs"),
+    ]
+
+
+    for index, (icon, label) in enumerate(
+        production_navigation
+    ):
+
+        st.button(
+            f"{icon}  {label}",
+            key=f"side_production_{index}",
+            use_container_width=True,
+            on_click=navigate_to,
+            args=(label,),
         )
 
-        user_avatar_url = (
-            st.session_state.get(
-                "user_avatar_url",
-                "",
-            )
-            or ""
+
+    # ========================================================
+    # BUSINESS
+    # ========================================================
+
+    st.caption("💼 BUSINESS")
+
+
+    business_navigation = [
+        ("👥", "Clients"),
+        ("🛒", "Orders"),
+        ("💸", "Expenses"),
+        ("💰", "Pricing"),
+        ("📊", "Revenue & Profit"),
+    ]
+
+
+    for index, (icon, label) in enumerate(
+        business_navigation
+    ):
+
+        st.button(
+            f"{icon}  {label}",
+            key=f"side_business_{index}",
+            use_container_width=True,
+            on_click=navigate_to,
+            args=(label,),
         )
 
-        (
-            avatar_column,
-            profile_info_column,
-        ) = st.columns(
-            [0.8, 2.8],
-            vertical_alignment="center",
+
+    # ========================================================
+    # FASHION PROFESSIONAL
+    # ========================================================
+
+    st.caption("👥 FASHION PROFESSIONAL")
+
+
+    professional_navigation = [
+        ("👔", "Fashion Professionals"),
+        ("🛍️", "Marketplace"),
+    ]
+
+
+    for index, (icon, label) in enumerate(
+        professional_navigation
+    ):
+
+        st.button(
+            f"{icon}  {label}",
+            key=f"side_professional_{index}",
+            use_container_width=True,
+            on_click=navigate_to,
+            args=(label,),
         )
 
-        with avatar_column:
 
-            if user_avatar_url:
+    # ========================================================
+    # AI SHORTCUTS
+    # ========================================================
 
-                st.image(
-                    user_avatar_url,
-                    width=52,
-                )
+    st.caption("⚡ AI SHORTCUTS")
 
-            else:
 
-                first_letter = (
-                    user_name.strip()[0].upper()
-                    if user_name.strip()
-                    else "F"
-                )
+    st.button(
+        "✦  Ask StyleSense",
+        key="side_ask_stylesense",
+        use_container_width=True,
+        on_click=navigate_to,
+        args=("Ask StyleSense",),
+    )
 
-                st.markdown(
-                    f"### {first_letter}"
-                )
 
-        with profile_info_column:
+    st.button(
+        "🚀  AI Co-Founder",
+        key="side_ai_cofounder",
+        use_container_width=True,
+        on_click=navigate_to,
+        args=("AI Co-Founder",),
+    )
 
-            st.markdown(
-                f"**{user_name}**"
-            )
 
-            st.caption(
-                user_profession
-            )
+    st.button(
+        "✓  My Tasks",
+        key="side_tasks",
+        use_container_width=True,
+        on_click=navigate_to,
+        args=("My Tasks",),
+    )
 
-            if user_email:
 
-                st.caption(
-                    user_email
-                )
+    st.button(
+        "🔔  Notifications",
+        key="side_notifications",
+        use_container_width=True,
+        on_click=open_notifications,
+    )
 
-        st.divider()
 
-        # ====================================================
-        # WORKSPACE
-        # ====================================================
+    # ========================================================
+    # SYSTEM
+    # ========================================================
 
-        st.caption("WORKSPACE")
+    st.caption("⚙️ SYSTEM")
 
-        if st.button(
-            "🏠  Dashboard",
-            key="side_dashboard",
-            use_container_width=True,
-        ):
-            navigate_to("Dashboard")
 
-        if st.button(
-            "📁  Projects",
-            key="side_projects",
-            use_container_width=True,
-        ):
-            navigate_to("Projects")
+    st.button(
+        "⚙  Settings",
+        key="side_settings",
+        use_container_width=True,
+        on_click=navigate_to,
+        args=("Settings",),
+    )
 
-        if st.button(
-            "🤖  AI Team",
-            key="side_ai_team",
-            use_container_width=True,
-        ):
-            navigate_to("AI Team")
 
-        # ====================================================
-        # AI DESIGN
-        # ====================================================
+    st.button(
+        "❓  Help & Support",
+        key="side_help",
+        use_container_width=True,
+        on_click=navigate_to,
+        args=("Help & Support",),
+    )
 
-        st.caption("🎨 AI DESIGN")
 
-        ai_design_navigation = [
-            ("✨", "Design Studio"),
-            ("📚", "Design Library"),
-            ("✏️", "AI Design Editor"),
-            ("💡", "Fashion Inspiration"),
-            ("🎨", "Color Matcher"),
-            ("🧵", "Fabric Advisor"),
-            ("📸", "Outfit Analyzer"),
-            ("👗", "AI Virtual Stylist"),
-            ("🎨", "Logo Generator"),
-        ]
-
-        for index, (icon, label) in enumerate(
-            ai_design_navigation
-        ):
-
-            if st.button(
-                f"{icon}  {label}",
-                key=f"side_ai_design_{index}",
-                use_container_width=True,
-            ):
-                navigate_to(label)
-
-        # ====================================================
-        # FASHION INTELLIGENCE
-        # ====================================================
-
-        st.caption("🧠 FASHION INTELLIGENCE")
-
-        intelligence_navigation = [
-            ("📈", "AI Fashion Trends"),
-            ("📰", "Fashion News"),
-            ("📰", "Fashion Magazine"),
-        ]
-
-        for index, (icon, label) in enumerate(
-            intelligence_navigation
-        ):
-
-            if st.button(
-                f"{icon}  {label}",
-                key=f"side_intelligence_{index}",
-                use_container_width=True,
-            ):
-                navigate_to(label)
-
-        # ====================================================
-        # PRODUCTION
-        # ====================================================
-
-        st.caption("🏭 PRODUCTION")
-
-        production_navigation = [
-            ("🏭", "Production Manager"),
-            ("📦", "Inventory"),
-            ("📏", "Measurements"),
-            ("📋", "Tech Packs"),
-        ]
-
-        for index, (icon, label) in enumerate(
-            production_navigation
-        ):
-
-            if st.button(
-                f"{icon}  {label}",
-                key=f"side_production_{index}",
-                use_container_width=True,
-            ):
-                navigate_to(label)
-
-        # ====================================================
-        # BUSINESS
-        # ====================================================
-
-        st.caption("💼 BUSINESS")
-
-        business_navigation = [
-            ("👥", "Clients"),
-            ("🛒", "Orders"),
-            ("💸", "Expenses"),
-            ("💰", "Pricing"),
-            ("📊", "Revenue & Profit"),
-        ]
-
-        for index, (icon, label) in enumerate(
-            business_navigation
-        ):
-
-            if st.button(
-                f"{icon}  {label}",
-                key=f"side_business_{index}",
-                use_container_width=True,
-            ):
-                navigate_to(label)
-
-        # ====================================================
-        # FASHION PROFESSIONAL
-        # ====================================================
-
-        st.caption("👥 FASHION PROFESSIONAL")
-
-        professional_navigation = [
-            ("👔", "Fashion Professionals"),
-            ("🛍️", "Marketplace"),
-        ]
-
-        for index, (icon, label) in enumerate(
-            professional_navigation
-        ):
-
-            if st.button(
-                f"{icon}  {label}",
-                key=f"side_professional_{index}",
-                use_container_width=True,
-            ):
-                navigate_to(label)
-
-        # ====================================================
-        # AI SHORTCUTS
-        # ====================================================
-
-        st.caption("⚡ AI SHORTCUTS")
-
-        if st.button(
-            "✦  Ask StyleSense",
-            key="side_ask_stylesense",
-            use_container_width=True,
-        ):
-            navigate_to("Ask StyleSense")
-
-        if st.button(
-            "🚀  AI Co-Founder",
-            key="side_ai_cofounder",
-            use_container_width=True,
-        ):
-            navigate_to("AI Co-Founder")
-
-        if st.button(
-            "✓  My Tasks",
-            key="side_tasks",
-            use_container_width=True,
-        ):
-            navigate_to("My Tasks")
-
-        if st.button(
-            "🔔  Notifications",
-            key="side_notifications",
-            use_container_width=True,
-        ):
-            navigate_to("Notifications")
-
-        # ====================================================
-        # SYSTEM
-        # ====================================================
-
-        st.caption("⚙️ SYSTEM")
-
-        if st.button(
-            "⚙  Settings",
-            key="side_settings",
-            use_container_width=True,
-        ):
-            navigate_to("Settings")
-
-        if st.button(
-            "❓  Help & Support",
-            key="side_help",
-            use_container_width=True,
-        ):
-            navigate_to("Help & Support")
-
-        if st.button(
-            "↪  Logout",
-            key="side_logout",
-            use_container_width=True,
-        ):
-            perform_logout()
+    st.button(
+        "↪  Logout",
+        key="side_logout",
+        use_container_width=True,
+        on_click=perform_logout,
+    )
 
 
 # ============================================================
@@ -888,6 +1020,7 @@ design_job_id = st.session_state.get(
     "design_generation_job_id"
 )
 
+
 if design_job_id:
 
     job_status = get_job_status(
@@ -896,9 +1029,6 @@ if design_job_id:
 
     status = job_status.get("status")
 
-    # --------------------------------------------------------
-    # GENERATING
-    # --------------------------------------------------------
 
     if status == "generating":
 
@@ -906,19 +1036,21 @@ if design_job_id:
             "🎨 Your AI fashion design is being generated..."
         )
 
-    # --------------------------------------------------------
-    # COMPLETED
-    # --------------------------------------------------------
 
     elif status == "completed":
 
         result = job_status.get("result")
 
+
         if result:
 
             st.session_state.design_generation_result = result
+
             st.session_state.current_image = result
-            st.session_state.design_generation_status = "completed"
+
+            st.session_state.design_generation_status = (
+                "completed"
+            )
 
             st.success(
                 "✨ Your AI design is ready!"
@@ -933,6 +1065,7 @@ if design_job_id:
                 use_container_width=True,
             )
 
+
         else:
 
             st.warning(
@@ -940,25 +1073,33 @@ if design_job_id:
                 "but no image was returned."
             )
 
+
         st.session_state.design_generation_job_id = None
 
-    # --------------------------------------------------------
-    # FAILED
-    # --------------------------------------------------------
 
     elif status == "failed":
 
         error = job_status.get("error")
 
-        st.session_state.design_generation_status = "failed"
+
+        st.session_state.design_generation_status = (
+            "failed"
+        )
+
         st.session_state.design_generation_error = error
+
 
         st.error(
             "❌ AI design generation failed."
         )
 
+
         if error:
-            st.caption(str(error))
+
+            st.caption(
+                str(error)
+            )
+
 
         st.session_state.design_generation_job_id = None
 
@@ -979,7 +1120,9 @@ current_page = st.session_state.get(
 
 if current_page == "Notifications":
 
-    st.title("🔔 Notifications")
+    st.title(
+        "🔔 Notifications"
+    )
 
     st.caption(
         "Stay updated with your StyleSense workspace."
@@ -992,7 +1135,9 @@ if current_page == "Notifications":
 
 elif current_page == "My Tasks":
 
-    st.title("✓ My Tasks")
+    st.title(
+        "✓ My Tasks"
+    )
 
     st.caption(
         "Your fashion workflow and AI tasks."
@@ -1003,11 +1148,13 @@ elif current_page == "My Tasks":
         [],
     )
 
+
     if not tasks:
 
         st.info(
             "You currently have no tasks."
         )
+
 
     else:
 
@@ -1036,6 +1183,7 @@ elif current_page == "Workspace":
         "current_project"
     )
 
+
     if current_project is None:
 
         st.warning(
@@ -1045,6 +1193,7 @@ elif current_page == "Workspace":
         st.info(
             "Go to Projects and click Open Project."
         )
+
 
     else:
 
@@ -1061,9 +1210,11 @@ else:
         current_page
     )
 
+
     if selected_page:
 
         selected_page()
+
 
     else:
 

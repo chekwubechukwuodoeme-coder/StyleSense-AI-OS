@@ -19,6 +19,9 @@ def render_settings():
     if "settings_section" not in st.session_state:
         st.session_state.settings_section = "Account"
 
+    if "open_profile_settings" not in st.session_state:
+        st.session_state.open_profile_settings = False
+
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
@@ -64,6 +67,7 @@ def render_settings():
         ):
 
             st.session_state.settings_section = name
+            st.session_state.open_profile_settings = False
 
             st.rerun()
 
@@ -74,6 +78,18 @@ def render_settings():
     # ========================================================
 
     selected = st.session_state.settings_section
+
+    # ========================================================
+    # PROFILE SHORTCUT
+    # ========================================================
+
+    if st.session_state.get(
+        "open_profile_settings",
+        False,
+    ):
+
+        selected = "Account"
+        st.session_state.settings_section = "Account"
 
     # ========================================================
     # ACCOUNT
@@ -294,10 +310,6 @@ def render_settings():
 
         st.divider()
 
-        # ----------------------------------------------------
-        # THEME
-        # ----------------------------------------------------
-
         appearance = st.selectbox(
             "Theme",
             [
@@ -307,10 +319,6 @@ def render_settings():
             ],
             key="settings_appearance_theme",
         )
-
-        # ----------------------------------------------------
-        # ACCENT COLOR
-        # ----------------------------------------------------
 
         accent_color = st.selectbox(
             "Accent Color",
@@ -323,10 +331,6 @@ def render_settings():
             key="settings_accent_color",
         )
 
-        # ----------------------------------------------------
-        # DENSITY
-        # ----------------------------------------------------
-
         interface_density = st.selectbox(
             "Interface Density",
             [
@@ -337,19 +341,11 @@ def render_settings():
             key="settings_interface_density",
         )
 
-        # ----------------------------------------------------
-        # ANIMATIONS
-        # ----------------------------------------------------
-
         enable_animations = st.toggle(
             "Enable interface animations",
             value=True,
             key="settings_animations",
         )
-
-        # ----------------------------------------------------
-        # SAVE
-        # ----------------------------------------------------
 
         if st.button(
             "Save Appearance",
@@ -360,12 +356,8 @@ def render_settings():
 
             st.session_state.appearance_theme = appearance
             st.session_state.accent_color = accent_color
-            st.session_state.interface_density = (
-                interface_density
-            )
-            st.session_state.enable_animations = (
-                enable_animations
-            )
+            st.session_state.interface_density = interface_density
+            st.session_state.enable_animations = enable_animations
 
             st.success(
                 "Appearance preferences saved."
@@ -385,10 +377,6 @@ def render_settings():
 
         st.divider()
 
-        # ----------------------------------------------------
-        # CREATIVITY
-        # ----------------------------------------------------
-
         ai_creativity = st.slider(
             "AI Creativity",
             min_value=1,
@@ -400,10 +388,6 @@ def render_settings():
             ),
             key="settings_ai_creativity",
         )
-
-        # ----------------------------------------------------
-        # RESPONSE STYLE
-        # ----------------------------------------------------
 
         response_style = st.selectbox(
             "AI Response Style",
@@ -417,19 +401,11 @@ def render_settings():
             key="settings_ai_response_style",
         )
 
-        # ----------------------------------------------------
-        # PROMPT ENHANCEMENT
-        # ----------------------------------------------------
-
         enhance_prompts = st.toggle(
             "Automatically enhance my prompts",
             value=True,
             key="settings_enhance_prompts",
         )
-
-        # ----------------------------------------------------
-        # DESIGN RECOMMENDATIONS
-        # ----------------------------------------------------
 
         design_recommendations = st.toggle(
             "Enable AI design recommendations",
@@ -437,19 +413,11 @@ def render_settings():
             key="settings_design_recommendations",
         )
 
-        # ----------------------------------------------------
-        # AI MEMORY
-        # ----------------------------------------------------
-
         remember_preferences = st.toggle(
             "Remember my fashion preferences",
             value=True,
             key="settings_remember_preferences",
         )
-
-        # ----------------------------------------------------
-        # SAVE
-        # ----------------------------------------------------
 
         if st.button(
             "Save AI Preferences",
@@ -458,22 +426,12 @@ def render_settings():
             key="save_ai_preferences",
         ):
 
-            st.session_state.ai_creativity = (
-                ai_creativity
-            )
-
-            st.session_state.ai_response_style = (
-                response_style
-            )
-
-            st.session_state.enhance_prompts = (
-                enhance_prompts
-            )
-
+            st.session_state.ai_creativity = ai_creativity
+            st.session_state.ai_response_style = response_style
+            st.session_state.enhance_prompts = enhance_prompts
             st.session_state.design_recommendations = (
                 design_recommendations
             )
-
             st.session_state.remember_preferences = (
                 remember_preferences
             )
@@ -496,10 +454,6 @@ def render_settings():
 
         st.divider()
 
-        # ----------------------------------------------------
-        # FASHION CATEGORY
-        # ----------------------------------------------------
-
         fashion_categories = st.multiselect(
             "Fashion Categories",
             [
@@ -517,10 +471,6 @@ def render_settings():
             key="settings_fashion_categories",
         )
 
-        # ----------------------------------------------------
-        # FAVORITE STYLES
-        # ----------------------------------------------------
-
         favorite_styles = st.multiselect(
             "Preferred Styles",
             [
@@ -536,10 +486,6 @@ def render_settings():
             ],
             key="settings_favorite_styles",
         )
-
-        # ----------------------------------------------------
-        # FAVORITE FABRICS
-        # ----------------------------------------------------
 
         favorite_fabrics = st.multiselect(
             "Preferred Fabrics",
@@ -558,10 +504,6 @@ def render_settings():
             key="settings_favorite_fabrics",
         )
 
-        # ----------------------------------------------------
-        # COLOR PALETTE
-        # ----------------------------------------------------
-
         preferred_colors = st.multiselect(
             "Preferred Colors",
             [
@@ -578,10 +520,6 @@ def render_settings():
             ],
             key="settings_preferred_colors",
         )
-
-        # ----------------------------------------------------
-        # SAVE
-        # ----------------------------------------------------
 
         if st.button(
             "Save Fashion Preferences",
